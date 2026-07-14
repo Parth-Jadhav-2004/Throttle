@@ -54,8 +54,12 @@ button, input, select { font: inherit; }
 .status-dot { width: 5px; height: 5px; border-radius: 50%; background: #daa23b; box-shadow: 0 0 7px currentColor; }
 .status.connected .status-dot { background: #6dbd87; }
 .status.error .status-dot { background: #df6e6e; }
-.refresh-button { display: grid; place-items: center; width: 48px; height: 48px; margin: 1px auto 0; padding: 0 0 2px; border: 2px solid #5b5a57; border-radius: 50%; background: #292928; color: #c9c6bf; cursor: pointer; font-size: 22px; transition: border-color .15s, background .15s, transform .15s; }
-.refresh-button:hover { border-color: #8c8981; background: #333331; }
+.action-row { display: flex; justify-content: center; gap: 10px; margin-top: 1px; }
+.action-button { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 2px solid #5b5a57; border-radius: 50%; background: #292928; color: #c9c6bf; cursor: pointer; transition: border-color .15s, background .15s, color .15s, transform .15s; }
+.action-button:hover { border-color: #8c8981; background: #333331; color: #f2f1ed; }
+.action-button:disabled { cursor: wait; opacity: .55; }
+.action-button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.update-button { color: #dca344; }
 .refresh-button.spinning { animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .connect-button { display: block; position: absolute; left: 82px; right: 82px; bottom: 56px; padding: 8px; border: 1px solid #6f6758; border-radius: 16px; background: #37332c; color: #e8d6b6; cursor: pointer; font-size: 10px; }
@@ -81,7 +85,8 @@ body[data-layout="condensed"] .meter-copy strong { font-size: 24px; }
 body[data-layout="condensed"] .meter-block h2 { margin-top: 9px; font-size: 16px; }
 body[data-layout="condensed"] .meter-block p { margin-top: 3px; }
 body[data-layout="condensed"] .status { margin-top: 3px; }
-body[data-layout="condensed"] .refresh-button { width: 42px; height: 42px; font-size: 19px; }
+body[data-layout="condensed"] .action-button { width: 42px; height: 42px; }
+body[data-layout="condensed"] .action-button svg { width: 19px; height: 19px; }
 
 body[data-layout="compact"] .stage { padding: 2px; }
 body[data-layout="compact"] .widget-card { height: 100%; padding: 8px; border-radius: 18px; }
@@ -91,7 +96,7 @@ body[data-layout="compact"] .meter-block h2,
 body[data-layout="compact"] .meter-block p,
 body[data-layout="compact"] .meter-copy span,
 body[data-layout="compact"] .status,
-body[data-layout="compact"] .refresh-button,
+body[data-layout="compact"] .action-row,
 body[data-layout="compact"] .connect-button,
 body[data-layout="compact"] footer,
 body[data-layout="compact"] .opacity-controls { display: none; }

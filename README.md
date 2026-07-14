@@ -34,8 +34,8 @@ If no account is connected, click **Connect ChatGPT / Codex**. A terminal opens 
 
 Run `npm run dist` to create:
 
-- `dist/portable/Throttle-0.1.1-x64-Portable.exe` — portable executable
-- `dist/installer/Throttle-0.1.1-x64-Setup.exe` — Windows installer
+- `dist/portable/Throttle-0.1.2-x64-Portable.exe` — portable executable
+- `dist/installer/Throttle-0.1.2-x64-Setup.exe` — Windows installer
 
 ## Controls
 
@@ -46,6 +46,7 @@ Run `npm run dist` to create:
 - Invalid off-screen saved coordinates are rejected if the monitor arrangement changes
 - Uses Electron's `screen-saver` always-on-top level and reasserts it after blur/show/restore, so normal browsers and desktop apps cannot cover it
 - Refresh button for an immediate usage update
+- Update button that checks GitHub and opens the newest release when available
 - Adjustable whole-widget opacity from 35% to 100%
 - Adjustable dark panel/grid opacity from 30% to 100%
 - Auto-refresh every 10 seconds, 30 seconds, 1 minute, or 5 minutes

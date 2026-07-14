@@ -1,6 +1,6 @@
 {
   "name": "throttle",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "An always-on-top Windows widget for live Codex subscription usage limits.",
   "main": "src/main.js",
   "author": "Parth Jadhav",

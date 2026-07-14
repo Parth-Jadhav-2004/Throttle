@@ -87,6 +87,24 @@ $('grid-opacity').addEventListener('input', event => {
 });
 $('interval').addEventListener('change', event => window.widget.setRefreshSeconds(Number(event.target.value)));
 $('refresh').addEventListener('click', () => window.widget.refresh());
+$('update').addEventListener('click', async () => {
+  const button = $('update');
+  const text = $('status').lastElementChild;
+  const previous = text.textContent;
+  button.disabled = true;
+  text.textContent = 'Checking for updates…';
+  try {
+    const result = await window.widget.checkForUpdate();
+    text.textContent = result.available
+      ? `Throttle ${result.latest} available · opening download`
+      : `Throttle ${result.current} is up to date`;
+  } catch {
+    text.textContent = 'Update check failed · try again later';
+  } finally {
+    button.disabled = false;
+    setTimeout(() => { text.textContent = previous; }, 2600);
+  }
+});
 $('connect').addEventListener('click', () => window.widget.connect());
 $('minimize').addEventListener('click', () => window.widget.minimize());
 $('close').addEventListener('click', () => window.widget.close());

@@ -1,10 +1,11 @@
-const { app, BrowserWindow, ipcMain, shell, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, screen, net } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
 const { CodexClient } = require('./codex-client');
 const { normalizeRateLimits, mergeRateLimitSnapshot } = require('./rate-limits');
 const { sanitizeSettings } = require('./settings');
+const { isNewerVersion } = require('./version');
 
 let window;
 let client;
@@ -141,6 +142,23 @@ ipcMain.handle('open-login', () => {
     shell.openExternal('https://chatgpt.com/auth/login');
   }
   return true;
+});
+ipcMain.handle('check-for-update', async () => {
+  const response = await net.fetch('https://api.github.com/repos/Parth-Jadhav-2004/Throttle/releases/latest', {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': `Throttle/${app.getVersion()}`
+    }
+  });
+  if (!response.ok) throw new Error(`GitHub update check failed (${response.status})`);
+  const release = await response.json();
+  const latest = String(release.tag_name || '').replace(/^v/i, '');
+  const current = app.getVersion();
+  const available = isNewerVersion(latest, current);
+  if (available) {
+    await shell.openExternal(`https://github.com/Parth-Jadhav-2004/Throttle/releases/tag/${encodeURIComponent(release.tag_name)}`);
+  }
+  return { available, current, latest };
 });
 ipcMain.on('minimize', () => window?.minimize());
 ipcMain.on('close', () => window?.close());

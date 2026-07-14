@@ -53,7 +53,14 @@
 
       <div id="status" class="status"><span class="status-dot"></span><span>Connecting to Codex…</span></div>
       <button id="connect" class="connect-button interactive" hidden>Connect ChatGPT / Codex</button>
-      <button id="refresh" class="refresh-button interactive" aria-label="Refresh usage" title="Refresh usage">↻</button>
+      <div class="action-row interactive">
+        <button id="refresh" class="action-button refresh-button" aria-label="Refresh usage" title="Refresh usage">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"></path></svg>
+        </button>
+        <button id="update" class="action-button update-button" aria-label="Check for updates" title="Check for updates">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14"></path></svg>
+        </button>
+      </div>
       <footer><span id="plan">LOCAL · PRIVATE</span><span id="updated">Not updated</span></footer>
     </section>
 

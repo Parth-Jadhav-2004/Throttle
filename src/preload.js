@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('widget', {
   setGridOpacity: value => ipcRenderer.invoke('set-grid-opacity', value),
   setRefreshSeconds: value => ipcRenderer.invoke('set-refresh-seconds', value),
   connect: () => ipcRenderer.invoke('open-login'),
+  checkForUpdate: () => ipcRenderer.invoke('check-for-update'),
   onUsageState: callback => ipcRenderer.on('usage-state', (_event, state) => callback(state)),
   minimize: () => ipcRenderer.send('minimize'),
   close: () => ipcRenderer.send('close')
