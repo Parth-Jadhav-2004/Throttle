@@ -1,0 +1,27 @@
+{
+  "name": "throttle",
+  "version": "0.1.0",
+  "description": "Throttle — an always-on-top Windows widget for live Codex subscription usage limits",
+  "main": "src/main.js",
+  "author": "Anakin Skywalker",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "pack": "electron-builder --dir",
+    "dist": "npm run dist:portable && npm run dist:installer",
+    "dist:portable": "electron-builder --win portable --config.directories.output=dist/portable",
+    "dist:installer": "electron-builder --win nsis --config.directories.output=dist/installer"
+  },
+  "devDependencies": {
+    "electron": "^43.1.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.local.throttle",
+    "productName": "Throttle",
+    "files": ["src/**/*", "throttle_app_icon.png", "package.json"],
+    "win": {"icon": "throttle_app_icon.png", "target": ["portable", "nsis"], "artifactName": "Throttle-${version}-${arch}.${ext}"},
+    "nsis": {"oneClick": false, "allowToChangeInstallationDirectory": true}
+  }
+}

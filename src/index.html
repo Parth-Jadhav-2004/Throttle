@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Throttle</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="stage">
+    <section class="widget-card" aria-label="Throttle Codex usage widget">
+      <div class="window-controls interactive">
+        <button id="minimize" aria-label="Minimize" title="Minimize">−</button>
+        <button id="close" aria-label="Close" title="Close">×</button>
+      </div>
+
+      <nav class="provider-tabs interactive" aria-label="Usage provider">
+        <button class="provider active" aria-current="page">Codex</button>
+        <button class="provider" id="claude-tab" title="Claude tracking is coming soon">Claude</button>
+      </nav>
+
+      <div class="meters">
+        <article class="meter-block">
+          <div class="meter">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="meter-track" cx="60" cy="60" r="48"></circle>
+              <circle id="five-ring" class="meter-progress" cx="60" cy="60" r="48"></circle>
+            </svg>
+            <div class="meter-copy">
+              <strong id="five-value">—</strong>
+              <span id="five-left">left</span>
+            </div>
+          </div>
+          <h2>5-hour</h2>
+          <p id="five-reset">Waiting for data</p>
+        </article>
+
+        <article class="meter-block">
+          <div class="meter">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="meter-track" cx="60" cy="60" r="48"></circle>
+              <circle id="week-ring" class="meter-progress orange" cx="60" cy="60" r="48"></circle>
+            </svg>
+            <div class="meter-copy">
+              <strong id="week-value">—</strong>
+              <span id="week-left">left</span>
+            </div>
+          </div>
+          <h2>Weekly</h2>
+          <p id="week-reset">Waiting for data</p>
+        </article>
+      </div>
+
+      <div id="status" class="status"><span class="status-dot"></span><span>Connecting to Codex…</span></div>
+      <button id="connect" class="connect-button interactive" hidden>Connect ChatGPT / Codex</button>
+      <button id="refresh" class="refresh-button interactive" aria-label="Refresh usage" title="Refresh usage">↻</button>
+      <footer><span id="plan">LOCAL · PRIVATE</span><span id="updated">Not updated</span></footer>
+    </section>
+
+    <section class="opacity-controls interactive" aria-label="Widget appearance">
+      <label for="opacity"><span>Widget<br>opacity</span><input id="opacity" type="range" min="35" max="100" step="1" value="92"><output id="opacity-value">92%</output></label>
+      <label for="grid-opacity"><span>Grid opacity</span><input id="grid-opacity" type="range" min="30" max="100" step="1" value="96"><output id="grid-opacity-value">96%</output></label>
+      <div class="refresh-row"><span>Auto-refresh</span><select id="interval"><option value="10">10 sec</option><option value="30">30 sec</option><option value="60">1 min</option><option value="300">5 min</option></select></div>
+    </section>
+  </main>
+  <script src="responsive.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

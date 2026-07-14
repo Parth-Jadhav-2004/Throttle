@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.log
+packaged-*.png
+packaged-*.json
+resize-*.png
+resize-*.json
+widget-preview.png
+widget-reference-ui.png
+window-state.json

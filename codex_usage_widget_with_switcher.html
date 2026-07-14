@@ -1,0 +1,48 @@
+<div style="max-width:220px; margin:0 auto; background:var(--surface-2); border:0.5px solid var(--border); border-radius:16px; padding:14px 16px 18px; display:flex; flex-direction:column; align-items:center; gap:14px;">
+
+  <div id="switcher" style="display:flex; width:100%; background:var(--surface-1); border-radius:999px; padding:3px; position:relative;">
+    <button data-val="codex" style="flex:1; border:none; background:var(--surface-2); border-radius:999px; padding:6px 0; font-size:12px; font-weight:500; color:var(--text-primary);">Codex</button>
+    <button data-val="claude" style="flex:1; border:none; background:transparent; border-radius:999px; padding:6px 0; font-size:12px; font-weight:500; color:var(--text-secondary);">Claude</button>
+  </div>
+
+  <div style="display:flex; gap:20px;">
+
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <svg width="72" height="72" viewBox="0 0 72 72" role="img" aria-label="5 hour limit, 62 percent remaining">
+        <circle cx="36" cy="36" r="30" fill="none" stroke="var(--border)" stroke-width="6"></circle>
+        <circle cx="36" cy="36" r="30" fill="none" stroke="#1D9E75" stroke-width="6" stroke-linecap="round" stroke-dasharray="188.4" stroke-dashoffset="71.6" transform="rotate(-90 36 36)"></circle>
+        <text x="36" y="33" text-anchor="middle" font-size="17" font-weight="500" fill="var(--text-primary)">62%</text>
+        <text x="36" y="47" text-anchor="middle" font-size="9" fill="var(--text-secondary)">left</text>
+      </svg>
+      <span style="font-size:12px; color:var(--text-secondary);">5-hour</span>
+    </div>
+
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <svg width="72" height="72" viewBox="0 0 72 72" role="img" aria-label="weekly limit, 34 percent remaining">
+        <circle cx="36" cy="36" r="30" fill="none" stroke="var(--border)" stroke-width="6"></circle>
+        <circle cx="36" cy="36" r="30" fill="none" stroke="#BA7517" stroke-width="6" stroke-linecap="round" stroke-dasharray="188.4" stroke-dashoffset="124.3" transform="rotate(-90 36 36)"></circle>
+        <text x="36" y="33" text-anchor="middle" font-size="17" font-weight="500" fill="var(--text-primary)">34%</text>
+        <text x="36" y="47" text-anchor="middle" font-size="9" fill="var(--text-secondary)">left</text>
+      </svg>
+      <span style="font-size:12px; color:var(--text-secondary);">Weekly</span>
+    </div>
+
+  </div>
+
+  <button aria-label="Refresh usage" style="width:32px; height:32px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center;">
+    <i class="ti ti-refresh" style="font-size:16px;" aria-hidden="true"></i>
+  </button>
+
+</div>
+
+<script>
+const buttons = document.querySelectorAll('#switcher button');
+buttons.forEach(b => b.addEventListener('click', () => {
+  buttons.forEach(x => {
+    x.style.background = 'transparent';
+    x.style.color = 'var(--text-secondary)';
+  });
+  b.style.background = 'var(--surface-2)';
+  b.style.color = 'var(--text-primary)';
+}));
+</script>
