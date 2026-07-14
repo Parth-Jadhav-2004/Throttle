@@ -1,6 +1,8 @@
 # Throttle
 
-A small, movable, always-on-top Windows widget that shows the live **Codex allowance included with a ChatGPT plan**.
+A focused, always-on-top Windows widget for monitoring the **Codex allowance included with a ChatGPT plan**.
+
+[Download the latest Windows release](https://github.com/Parth-Jadhav-2004/Throttle/releases/latest)
 
 ## What it tracks
 
@@ -28,12 +30,12 @@ The widget uses the official local `codex app-server` protocol and its `account/
 
 If no account is connected, click **Connect ChatGPT / Codex**. A terminal opens and starts the official `codex login` flow.
 
-## Installable builds
+## Windows builds
 
-After `npm run dist`, builds are placed in separate folders:
+Run `npm run dist` to create:
 
-- `dist/portable/Throttle-0.1.0-x64.exe` — run without installing
-- `dist/installer/Throttle-0.1.0-x64.exe` — normal Windows installer
+- `dist/portable/Throttle-0.1.1-x64-Portable.exe` — portable executable
+- `dist/installer/Throttle-0.1.1-x64-Setup.exe` — Windows installer
 
 ## Controls
 
@@ -77,7 +79,7 @@ Test coverage includes window classification, malformed/missing payloads, reset 
 - **Codex not found:** ensure `codex --version` works in a new terminal and restart the widget.
 - **Protocol error after a Codex update:** update this project and re-run tests; the app-server schema is version-specific.
 
-## Sources
+## References
 
-- OpenAI Codex app-server documentation: https://developers.openai.com/codex/app-server/
-- OpenAI Codex repository app-server protocol: https://github.com/openai/codex/tree/main/codex-rs/app-server
+- [OpenAI Codex app-server documentation](https://developers.openai.com/codex/app-server/)
+- [OpenAI Codex app-server protocol](https://github.com/openai/codex/tree/main/codex-rs/app-server)

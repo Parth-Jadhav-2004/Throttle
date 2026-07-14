@@ -34,7 +34,7 @@ function createWindow() {
   );
   window = new BrowserWindow({
     title: 'Throttle',
-    icon: path.join(__dirname, '..', 'throttle_app_icon.png'),
+    icon: path.join(__dirname, '..', 'assets', 'throttle.png'),
     width: initialWidth, height: initialHeight,
     minWidth: 190, minHeight: 190, maxWidth: 360, maxHeight: 590,
     ...(isVisible ? savedPosition : {}),
