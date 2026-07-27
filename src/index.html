@@ -6,71 +6,91 @@
   <title>Throttle</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-dock-state="hidden">
   <main class="stage">
-    <section class="widget-card" aria-label="Throttle Codex usage widget">
-      <div class="window-controls interactive">
-        <button id="minimize" aria-label="Minimize" title="Minimize">−</button>
-        <button id="close" aria-label="Close" title="Close">×</button>
-      </div>
+    <section id="island" class="island" data-view="usage" aria-label="Throttle Codex usage island">
+      <header class="island-header">
+        <div class="brand">
+          <span id="status-dot" class="status-dot" aria-hidden="true"></span>
+          <span class="brand-copy">
+            <strong>Throttle</strong>
+            <span id="plan">CODEX · LOCAL</span>
+          </span>
+        </div>
+        <span id="updated" class="updated">Connecting…</span>
+        <div class="header-actions">
+          <button id="refresh" class="icon-button" type="button" aria-label="Refresh usage" title="Refresh usage">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"></path></svg>
+          </button>
+          <button id="settings" class="icon-button" type="button" aria-label="Open settings" title="Settings">
+            <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.55v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 4.1 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2.3V9.55h.09A1.7 1.7 0 0 0 4.1 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06L6.56 3.7l.06.06A1.7 1.7 0 0 0 8.5 4.1a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V2.3h4.05v.09A1.7 1.7 0 0 0 15 4.1a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 8.5c.14.4.34.74.6 1 .3.27.68.4 1.1.4h.1v4.05h-.09A1.7 1.7 0 0 0 19.4 15Z"></path></svg>
+            <svg class="back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+          </button>
+          <button id="retract" class="icon-button retract-button" type="button" aria-label="Hide Throttle" title="Hide">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg>
+          </button>
+        </div>
+      </header>
 
-      <nav class="provider-tabs interactive" aria-label="Usage provider">
-        <button class="provider active" aria-current="page">Codex</button>
-        <button class="provider" id="claude-tab" title="Claude tracking is coming soon">Claude</button>
-      </nav>
-
-      <div class="meters">
-        <article class="meter-block">
-          <div class="meter">
-            <svg viewBox="0 0 120 120" aria-hidden="true">
-              <circle class="meter-track" cx="60" cy="60" r="48"></circle>
-              <circle id="five-ring" class="meter-progress" cx="60" cy="60" r="48"></circle>
-            </svg>
-            <div class="meter-copy">
-              <strong id="five-value">—</strong>
-              <span id="five-left">left</span>
+      <section class="panel-view usage-view" aria-label="Usage">
+        <div class="usage-grid">
+          <article class="usage-tile">
+            <div class="meter">
+              <svg viewBox="0 0 96 96" aria-hidden="true">
+                <circle class="meter-track" cx="48" cy="48" r="36"></circle>
+                <circle id="five-ring" class="meter-progress blue" cx="48" cy="48" r="36"></circle>
+              </svg>
+              <div class="meter-copy"><strong id="five-value">—</strong><span id="five-left">left</span></div>
             </div>
-          </div>
-          <h2>5-hour</h2>
-          <p id="five-reset">Waiting for data</p>
-        </article>
+            <div class="limit-copy"><strong>5-hour</strong><span id="five-reset">Waiting for data</span></div>
+          </article>
 
-        <article class="meter-block">
-          <div class="meter">
-            <svg viewBox="0 0 120 120" aria-hidden="true">
-              <circle class="meter-track" cx="60" cy="60" r="48"></circle>
-              <circle id="week-ring" class="meter-progress orange" cx="60" cy="60" r="48"></circle>
-            </svg>
-            <div class="meter-copy">
-              <strong id="week-value">—</strong>
-              <span id="week-left">left</span>
+          <article class="usage-tile">
+            <div class="meter">
+              <svg viewBox="0 0 96 96" aria-hidden="true">
+                <circle class="meter-track" cx="48" cy="48" r="36"></circle>
+                <circle id="week-ring" class="meter-progress orange" cx="48" cy="48" r="36"></circle>
+              </svg>
+              <div class="meter-copy"><strong id="week-value">—</strong><span id="week-left">left</span></div>
             </div>
-          </div>
-          <h2>Weekly</h2>
-          <p id="week-reset">Waiting for data</p>
-        </article>
-      </div>
+            <div class="limit-copy"><strong>Weekly</strong><span id="week-reset">Waiting for data</span></div>
+          </article>
+        </div>
+        <div class="connection-row">
+          <span id="status" class="connection-status" role="status" aria-live="polite">Connecting to Codex…</span>
+          <button id="connect" class="connect-button" type="button" hidden>Connect Codex</button>
+        </div>
+      </section>
 
-      <div id="status" class="status"><span class="status-dot"></span><span>Connecting to Codex…</span></div>
-      <button id="connect" class="connect-button interactive" hidden>Connect ChatGPT / Codex</button>
-      <div class="action-row interactive">
-        <button id="refresh" class="action-button refresh-button" aria-label="Refresh usage" title="Refresh usage">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"></path></svg>
-        </button>
-        <button id="update" class="action-button update-button" aria-label="Check for updates" title="Check for updates">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14"></path></svg>
-        </button>
-      </div>
-      <footer><span id="plan">LOCAL · PRIVATE</span><span id="updated">Not updated</span></footer>
-    </section>
-
-    <section class="opacity-controls interactive" aria-label="Widget appearance">
-      <label for="opacity"><span>Widget<br>opacity</span><input id="opacity" type="range" min="35" max="100" step="1" value="92"><output id="opacity-value">92%</output></label>
-      <label for="grid-opacity"><span>Grid opacity</span><input id="grid-opacity" type="range" min="30" max="100" step="1" value="96"><output id="grid-opacity-value">96%</output></label>
-      <div class="refresh-row"><span>Auto-refresh</span><select id="interval"><option value="10">10 sec</option><option value="30">30 sec</option><option value="60">1 min</option><option value="300">5 min</option></select></div>
+      <section class="panel-view settings-view" aria-label="Settings">
+        <div class="setting-row">
+          <label for="opacity">Widget opacity</label>
+          <input id="opacity" type="range" min="35" max="100" step="1" value="92">
+          <output id="opacity-value" for="opacity">92%</output>
+        </div>
+        <div class="setting-row">
+          <label for="grid-opacity">Panel opacity</label>
+          <input id="grid-opacity" type="range" min="30" max="100" step="1" value="96">
+          <output id="grid-opacity-value" for="grid-opacity">96%</output>
+        </div>
+        <div class="setting-row compact-setting">
+          <label for="interval">Auto-refresh</label>
+          <select id="interval">
+            <option value="10">10 seconds</option>
+            <option value="30">30 seconds</option>
+            <option value="60">1 minute</option>
+            <option value="300">5 minutes</option>
+          </select>
+          <button id="update" class="update-button" type="button">Check for updates</button>
+        </div>
+        <div class="setting-row mobile-setting-row">
+          <span>iPhone widget</span>
+          <button id="mobile-pairing" class="update-button" type="button">Pair with Tailscale</button>
+        </div>
+        <p id="settings-status" class="settings-status" role="status" aria-live="polite"></p>
+      </section>
     </section>
   </main>
-  <script src="responsive.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

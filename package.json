@@ -1,13 +1,13 @@
 {
   "name": "throttle",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "An always-on-top Windows widget for live Codex subscription usage limits.",
   "main": "src/main.js",
   "author": "Parth Jadhav",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "test": "node --test",
+    "test": "node --test test/*.test.js",
     "pack": "electron-builder --dir",
     "dist": "npm run dist:portable && npm run dist:installer",
     "dist:portable": "electron-builder --win portable --config.directories.output=dist/portable",
@@ -20,9 +20,33 @@
   "build": {
     "appId": "com.parthjadhav.throttle",
     "productName": "Throttle",
-    "files": ["src/**/*", "assets/throttle.png", "package.json"],
-    "win": {"icon": "assets/throttle.ico", "target": ["portable", "nsis"]},
-    "portable": {"artifactName": "Throttle-${version}-${arch}-Portable.${ext}"},
-    "nsis": {"oneClick": false, "allowToChangeInstallationDirectory": true, "artifactName": "Throttle-${version}-${arch}-Setup.${ext}"}
+    "files": [
+      "src/**/*",
+      "assets/throttle.png",
+      "assets/throttle.ico",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/get-windows/**/*.node"
+    ],
+    "win": {
+      "icon": "assets/throttle.ico",
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    },
+    "portable": {
+      "artifactName": "Throttle-${version}-${arch}-Portable.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Throttle-${version}-${arch}-Setup.${ext}"
+    }
+  },
+  "dependencies": {
+    "get-windows": "^9.3.0",
+    "qrcode": "^1.5.4"
   }
 }
