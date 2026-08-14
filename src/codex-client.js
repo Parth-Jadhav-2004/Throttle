@@ -30,7 +30,7 @@ class CodexClient extends EventEmitter {
     this.process.stderr.on('data', chunk => this.emit('diagnostic', String(chunk)));
     this.process.on('error', error => this.failAll(error));
     this.process.on('exit', code => { this.failAll(new Error(`Codex app-server exited (${code ?? 'unknown'})`)); this.ready = null; this.process = null; });
-    this.ready = this.request('initialize', { clientInfo: { name: 'throttle', title: 'Throttle', version: '0.1.2' }, capabilities: null }, true)
+    this.ready = this.request('initialize', { clientInfo: { name: 'throttle', title: 'Throttle', version: '0.1.4' }, capabilities: null }, true)
       .then(result => { this.send({ method: 'initialized', params: {} }); return result; });
     return this.ready;
   }

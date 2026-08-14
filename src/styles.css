@@ -4,6 +4,7 @@
   --panel-opacity: .96;
   --blue: #79aaf8;
   --orange: #e0a246;
+  --green: #6bc58b;
   --text: #f5f6f8;
   --muted: #a8abb2;
   --dim: #747780;
@@ -161,6 +162,7 @@ input:focus-visible { outline: 2px solid rgba(121,170,248,.85); outline-offset: 
   height: 137px;
   padding: 8px 10px 3px;
 }
+.usage-grid.single-limit { grid-template-columns: 1fr; }
 .usage-tile {
   display: grid;
   grid-template-columns: 76px 1fr;
@@ -172,6 +174,7 @@ input:focus-visible { outline: 2px solid rgba(121,170,248,.85); outline-offset: 
   background: rgba(255,255,255,.028);
   box-shadow: inset 0 1px rgba(255,255,255,.018);
 }
+.usage-tile[hidden] { display: none; }
 .meter { position: relative; width: 70px; height: 70px; }
 .meter svg { display: block; width: 100%; height: 100%; overflow: visible; transform: rotate(-90deg); }
 .meter circle { fill: none; stroke-width: 8; }
@@ -184,6 +187,7 @@ input:focus-visible { outline: 2px solid rgba(121,170,248,.85); outline-offset: 
 }
 .meter-progress.blue { stroke: var(--blue); filter: drop-shadow(0 0 3px rgba(121,170,248,.25)); }
 .meter-progress.orange { stroke: var(--orange); filter: drop-shadow(0 0 3px rgba(224,162,70,.22)); }
+.meter-progress.green { stroke: var(--green); filter: drop-shadow(0 0 3px rgba(107,197,139,.25)); }
 .meter-copy { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .meter-copy strong { font-size: 19px; line-height: 1; letter-spacing: -.045em; }
 .meter-copy span { min-height: 12px; margin-top: 4px; color: #9699a1; font-size: 8px; }

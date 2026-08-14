@@ -6,6 +6,7 @@ A focused, auto-hiding Windows usage island for monitoring the **Codex allowance
 
 ## What it tracks
 
+- Monthly Codex limit for free ChatGPT accounts
 - 5-hour Codex limit, when the account reports that window
 - Weekly Codex limit, when the account reports that window
 - Remaining percentage and reset countdown
@@ -40,8 +41,8 @@ If no account is connected, reveal the island and click **Connect Codex**. A ter
 
 Run `npm run dist` to create:
 
-- `dist/portable/Throttle-0.1.2-x64-Portable.exe` — portable executable
-- `dist/installer/Throttle-0.1.2-x64-Setup.exe` — Windows installer
+- `dist/portable/Throttle-0.1.4-x64-Portable.exe` — portable executable
+- `dist/installer/Throttle-0.1.4-x64-Setup.exe` — Windows installer
 
 ## iPhone app and widgets
 
@@ -111,6 +112,7 @@ Test coverage includes dock geometry, transition guards, full-screen classificat
 
 - **Codex login required:** run `codex login`, then click refresh.
 - **Only weekly limit is shown:** the account response currently has no 5-hour bucket. The island shows `N/A` rather than inventing data.
+- **Only monthly limit is shown:** free ChatGPT accounts report a monthly window, so Throttle hides the 5-hour and weekly limits and shows only the monthly one.
 - **Codex not found:** ensure `codex --version` works in a new terminal and restart Throttle.
 - **Top edge does not reveal:** full-screen apps intentionally suppress the gesture. Use **Show Throttle** from the system tray to verify the app is running.
 - **Stacked monitors:** a boundary with another display directly above it is not treated as a physical top edge.

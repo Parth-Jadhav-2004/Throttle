@@ -37,6 +37,14 @@ function renderLimit(prefix, data) {
   $(`${prefix}-reset`).textContent = formatReset(data.resetsAt);
 }
 
+function applyLimitVisibility(data) {
+  const free = Boolean(data && data.isFree);
+  $('tile-five').hidden = free;
+  $('tile-week').hidden = free;
+  $('tile-month').hidden = !free;
+  $('usage-grid').classList.toggle('single-limit', free);
+}
+
 function setConnection(status, text) {
   const dot = $('status-dot');
   dot.className = 'status-dot';
@@ -55,8 +63,10 @@ function render(state) {
   if (state.status === 'connected' && state.data) {
     setConnection('connected', 'Live · local Codex connection');
     $('connect').hidden = true;
+    applyLimitVisibility(state.data);
     renderLimit('five', state.data.fiveHour);
     renderLimit('week', state.data.weekly);
+    renderLimit('month', state.data.monthly);
     $('plan').textContent = `${(state.data.planType || 'unknown').toUpperCase()} PLAN · LOCAL`;
     $('updated').textContent = `Updated ${new Date(state.updatedAt).toLocaleTimeString([], {
       hour: '2-digit',
@@ -165,4 +175,5 @@ setInterval(() => {
   if (!lastState?.data) return;
   renderLimit('five', lastState.data.fiveHour);
   renderLimit('week', lastState.data.weekly);
+  renderLimit('month', lastState.data.monthly);
 }, 30000);

@@ -44,3 +44,31 @@ test('merges sparse live notifications into the last full snapshot', () => {
     secondary: { usedPercent: 40, windowDurationMins: 10080, resetsAt: 9000 }
   });
 });
+
+test('classifies a monthly window and flags the free plan', () => {
+  const payload = { rateLimits: { planType: 'free', primary: { usedPercent: 33, windowDurationMins: 43200, resetsAt: 2000000 }, secondary: null } };
+  const result = normalizeRateLimits(payload, 1000);
+  assert.equal(result.isFree, true);
+  assert.equal(result.monthly.windowDurationMins, 43200);
+  assert.equal(result.monthly.remainingPercent, 67);
+  assert.equal(result.fiveHour, null);
+  assert.equal(result.weekly, null);
+});
+
+test('detects a free plan with a monthly primary and five-hour secondary', () => {
+  const payload = { rateLimitsByLimitId: { codex: { planType: 'Free', primary: { usedPercent: 10, windowDurationMins: 43200, resetsAt: 2000000 }, secondary: { usedPercent: 40, windowDurationMins: 300, resetsAt: 1500 } } } };
+  const result = normalizeRateLimits(payload, 1000);
+  assert.equal(result.isFree, true);
+  assert.equal(result.monthly.usedPercent, 10);
+  assert.equal(result.fiveHour.usedPercent, 40);
+  assert.equal(result.weekly, null);
+});
+
+test('paid plans keep five-hour and weekly limits with no monthly window', () => {
+  const payload = { rateLimits: { planType: 'pro', primary: { usedPercent: 7, windowDurationMins: 10080, resetsAt: 9000 }, secondary: { usedPercent: 12, windowDurationMins: 300, resetsAt: 1500 } } };
+  const result = normalizeRateLimits(payload, 1000);
+  assert.equal(result.isFree, false);
+  assert.equal(result.monthly, null);
+  assert.equal(result.weekly.usedPercent, 7);
+  assert.equal(result.fiveHour.usedPercent, 12);
+});

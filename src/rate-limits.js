@@ -1,3 +1,7 @@
+const FIVE_HOUR_MINS = 300;
+const WEEKLY_MINS = 10080; // 7 days
+const MONTHLY_MIN_MINS = 28 * 1440; // 28 days
+
 function clampPercent(value) {
   const n = Number(value);
   return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0;
@@ -14,13 +18,36 @@ function normalizeWindow(window) {
   };
 }
 
+function windowKind(window) {
+  if (!window) return null;
+  if (window.windowDurationMins === FIVE_HOUR_MINS) return 'fiveHour';
+  if (window.windowDurationMins === WEEKLY_MINS) return 'weekly';
+  if (window.windowDurationMins >= MONTHLY_MIN_MINS) return 'monthly';
+  return null;
+}
+
+function isFreePlan(planType) {
+  return String(planType || '').toLowerCase() === 'free';
+}
+
+function collectWindows(bucket) {
+  if (!bucket || typeof bucket !== 'object') return [];
+  return Object.values(bucket).map(normalizeWindow).filter(Boolean);
+}
+
 function normalizeRateLimits(payload) {
   const bucket = payload?.rateLimitsByLimitId?.codex || payload?.rateLimits || null;
-  if (!bucket) return { planType: null, fiveHour: null, weekly: null };
-  const windows = [normalizeWindow(bucket.primary), normalizeWindow(bucket.secondary)].filter(Boolean);
-  const fiveHour = windows.find(w => w.windowDurationMins === 300) || null;
-  const weekly = windows.find(w => w.windowDurationMins === 10080) || null;
-  return { planType: bucket.planType || null, fiveHour, weekly };
+  if (!bucket) return { planType: null, fiveHour: null, weekly: null, monthly: null, isFree: false };
+  const windows = collectWindows(bucket);
+  const find = kind => windows.find(window => windowKind(window) === kind) || null;
+  const planType = bucket.planType || null;
+  return {
+    planType,
+    fiveHour: find('fiveHour'),
+    weekly: find('weekly'),
+    monthly: find('monthly'),
+    isFree: isFreePlan(planType)
+  };
 }
 
 function formatResetTime(resetsAt, nowSeconds = Date.now() / 1000) {
@@ -48,4 +75,4 @@ function mergeRateLimitSnapshot(previous = {}, update = {}) {
   return merge(previous, update);
 }
 
-module.exports = { normalizeRateLimits, formatResetTime, mergeRateLimitSnapshot };
+module.exports = { normalizeRateLimits, formatResetTime, mergeRateLimitSnapshot, isFreePlan };

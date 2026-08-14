@@ -112,7 +112,8 @@ function updateMobileSnapshot(data, updatedAt = Date.now()) {
     planType: data?.planType || null,
     limits: {
       weekly: data?.weekly || null,
-      fiveHour: data?.fiveHour || null
+      fiveHour: data?.fiveHour || null,
+      monthly: data?.monthly || null
     }
   };
 }
