@@ -10,16 +10,32 @@ test('uses safe defaults with every provider on', () => assert.deepEqual(sanitiz
   showAntigravity: true,
   providerOrder: ['claude', 'codex', 'cursor', 'antigravity'],
   theme: 'system',
+  density: 'default',
+  reduceAnimations: false,
+  transparency: false,
   valueMode: 'left',
   resetMode: 'relative',
   clock: 'system',
   alwaysShowPacing: false,
-  trayStyle: 'meter',
+  trayStyle: 'logo',
+  taskbarStyle: 'text',
+  taskbarHiddenProviders: [],
+  showTotalSpend: true,
+  spendMetric: 'cost',
+  spendPeriod: 'last30',
   hiddenMetrics: [],
   starredMetrics: [],
+  placements: {},
   expandedProviders: [],
+  alertAlmostOut: false,
+  alertCuttingClose: false,
+  alertWillRunOut: false,
+  hideFromScreenShare: false,
+  localApi: true,
   shortcut: DEFAULT_SHORTCUT,
-  launchAtLogin: false
+  launchAtLogin: false,
+  welcomed: false,
+  welcomeCardDismissed: false
 }));
 
 test('clamps the refresh interval', () => {
@@ -53,13 +69,13 @@ test('lists visible providers in the saved order', () => {
   );
 });
 
-test('validates metric keys and caps starred metrics at two', () => {
+test('validates metric keys and caps starred metrics at two per provider', () => {
   const settings = sanitizeSettings({
     hiddenMetrics: ['claude:weekly', 'nope:x', 'codex', 'claude:weekly', 5],
-    starredMetrics: ['claude:session', 'codex:weekly', 'cursor:included']
+    starredMetrics: ['claude:session', 'claude:weekly', 'claude:extra', 'codex:weekly']
   });
   assert.deepEqual(settings.hiddenMetrics, ['claude:weekly']);
-  assert.deepEqual(settings.starredMetrics, ['claude:session', 'codex:weekly']);
+  assert.deepEqual(settings.starredMetrics, ['claude:session', 'claude:weekly', 'codex:weekly']);
 });
 
 test('rejects unknown enum values and unsafe shortcuts', () => {
@@ -69,4 +85,21 @@ test('rejects unknown enum values and unsafe shortcuts', () => {
   assert.equal(settings.shortcut, DEFAULT_SHORTCUT);
   assert.equal(sanitizeSettings({ shortcut: '' }).shortcut, '');
   assert.equal(sanitizeSettings({ shortcut: 'Alt+Shift+F5' }).shortcut, 'Alt+Shift+F5');
+});
+
+test('keeps only valid metric placements', () => {
+  assert.deepEqual(
+    sanitizeSettings({ placements: { 'claude:today': 'always', 'codex:trend': 'demand', 'claude:x': 'sideways', bogus: 'always' } }).placements,
+    { 'claude:today': 'always', 'codex:trend': 'demand' }
+  );
+  assert.deepEqual(sanitizeSettings({ placements: ['claude:today'] }).placements, {});
+});
+
+test('validates taskbar, spend and alert settings', () => {
+  const settings = sanitizeSettings({ taskbarStyle: 'neon', spendMetric: 'rate', spendPeriod: 'week', taskbarHiddenProviders: ['codex', 'nope', 'codex'], alertWillRunOut: 1 });
+  assert.equal(settings.taskbarStyle, 'text');
+  assert.equal(settings.spendMetric, 'rate');
+  assert.equal(settings.spendPeriod, 'last30');
+  assert.deepEqual(settings.taskbarHiddenProviders, ['codex']);
+  assert.equal(settings.alertWillRunOut, true);
 });

@@ -5,15 +5,26 @@ const DEFAULT_BASE_URL = 'https://api2.cursor.sh';
 const OAUTH_CLIENT_ID = 'KbZUR41cY7W6zRSdpSUJ7I7mLYBKOCmB';
 const REFRESH_SKEW_MS = 5 * 60 * 1000;
 
-function jwtExpiryMs(token) {
+const USAGE_EVENTS_URL = 'https://cursor.com/api/dashboard/get-filtered-usage-events';
+
+function jwtPayload(token) {
   const parts = String(token || '').split('.');
   if (parts.length < 2) return null;
   try {
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
-    return Number.isFinite(payload.exp) ? payload.exp * 1000 : null;
+    return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
   } catch {
     return null;
   }
+}
+
+function jwtExpiryMs(token) {
+  const payload = jwtPayload(token);
+  return Number.isFinite(payload?.exp) ? payload.exp * 1000 : null;
+}
+
+function jwtSubject(token) {
+  const subject = jwtPayload(token)?.sub;
+  return typeof subject === 'string' && subject ? subject : null;
 }
 
 function isExpiring(token, now, skewMs = REFRESH_SKEW_MS) {
@@ -146,6 +157,33 @@ class CursorClient {
     const data = normalizeCursorUsage({ usage, planInfo, membershipType, requestUsage });
     if (!data.included && !data.api) throw new Error('Unable to read Cursor usage');
     return data;
+  }
+
+  async getUsageEvents({ startMs, pageSize = 1000, maxPages = 20 } = {}) {
+    const auth = await this.readAuth();
+    const token = await this.resolveToken(auth);
+    const subject = jwtSubject(token);
+    if (!subject) throw new Error('Cursor login required');
+    const parts = subject.split('|');
+    const userId = parts.length > 1 ? parts[1] : parts[0];
+    const end = this.now();
+    const start = Number.isFinite(startMs) ? startMs : end - 30 * 86400000;
+    const events = [];
+    for (let page = 1; page <= maxPages; page += 1) {
+      const payload = await this.request(USAGE_EVENTS_URL, {
+        method: 'POST',
+        headers: {
+          Cookie: `WorkosCursorSessionToken=${userId}%3A%3A${token}`,
+          'Content-Type': 'application/json',
+          Origin: 'https://cursor.com'
+        },
+        body: JSON.stringify({ startDate: String(start), endDate: String(end), page, pageSize })
+      });
+      const batch = Array.isArray(payload?.usageEventsDisplay) ? payload.usageEventsDisplay : [];
+      events.push(...batch);
+      if (!batch.length || events.length >= Number(payload?.totalUsageEventsCount || 0)) break;
+    }
+    return events;
   }
 
   async getUsage() {

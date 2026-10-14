@@ -44,7 +44,7 @@ test('maps each provider into labelled metrics', () => {
 });
 
 test('metric catalog keeps static entries even before data arrives', () => {
-  assert.deepEqual(model.metricCatalog('claude', null).map(m => m.id), ['session', 'weekly']);
+  assert.deepEqual(model.metricCatalog('claude', null).map(m => m.id), ['session', 'weekly', 'today', 'yesterday', 'last30', 'trend']);
   assert.deepEqual(model.metricCatalog('antigravity', { windows: [{ label: 'Claude', usedPercent: 1 }] }).map(m => m.id), ['claude']);
 });
 
@@ -115,4 +115,54 @@ test('tray metrics prefer starred metrics, else the two most used', () => {
     model.trayTooltip(model.trayMetrics(providers, base, NOW), 'left'),
     'Throttle\nCodex Session: 10% left\nClaude Session: 30% left'
   );
+});
+
+test('taskbar shows starred meters per provider, else the first two of each', () => {
+  const providers = {
+    claude: { data: { fiveHour: { usedPercent: 70 }, weekly: { usedPercent: 20 } } },
+    codex: { data: { fiveHour: { usedPercent: 90 }, weekly: { usedPercent: 10 }, monthly: { usedPercent: 5 } } }
+  };
+  const base = { providerOrder: ['claude', 'codex', 'cursor', 'antigravity'] };
+  const keys = settings => model.stripEntries(providers, { ...base, ...settings }, NOW).map(group => [group.provider, group.metrics.map(e => e.metric.id)]);
+  assert.deepEqual(keys({}), [['claude', ['session', 'weekly']], ['codex', ['session', 'weekly']]]);
+  assert.deepEqual(keys({ starredMetrics: ['codex:monthly'] }), [['claude', ['session', 'weekly']], ['codex', ['monthly']]]);
+  assert.deepEqual(keys({ taskbarHiddenProviders: ['claude'], hiddenMetrics: ['codex:session'] }), [['codex', ['weekly', 'monthly']]]);
+  assert.deepEqual(keys({ showCodex: false }), [['claude', ['session', 'weekly']]]);
+});
+
+test('spend rows start on demand and the trend stays visible unless moved', () => {
+  const catalog = model.metricCatalog('codex', null);
+  const placement = (id, settings = {}) => model.placementFor(`codex:${id}`, catalog.find(entry => entry.id === id), settings);
+  assert.equal(placement('session'), 'always');
+  assert.equal(placement('today'), 'demand');
+  assert.equal(placement('trend'), 'always');
+  assert.equal(placement('today', { placements: { 'codex:today': 'always' } }), 'always');
+  assert.equal(model.metricCatalog('antigravity', null).some(entry => entry.kind !== 'quota'), false);
+});
+
+test('formats money, tokens and spend rows compactly', () => {
+  assert.equal(model.formatMoney(4.6), '$4.60');
+  assert.equal(model.formatMoney(596.48), '$596');
+  assert.equal(model.formatMoney(4600), '$4.6K');
+  assert.equal(model.formatTokens(35_800_000), '35.8M');
+  assert.equal(model.formatTokens(618_500_000), '619M');
+  assert.equal(model.formatSpendRow({ cost: 49.85, tokens: 35_800_000 }), '$49.85 · 35.8M tokens');
+  assert.equal(model.formatSpendRow(null), 'No usage');
+  assert.equal(model.formatSpendValue(2.5, 'rate', true), '$2.50 per million tokens');
+});
+
+test('totals spend across visible providers, ranked by value', () => {
+  const spend = {
+    claude: { summary: { last30: { cost: 10, tokens: 4e6 } } },
+    codex: { summary: { last30: { cost: 30, tokens: 1e6 } } },
+    cursor: { summary: { last30: { cost: 20, tokens: 10e6 } } }
+  };
+  const settings = { providerOrder: ['claude', 'codex', 'cursor', 'antigravity'], showCursor: false };
+  const cost = model.totalSpend(spend, settings, 'last30', 'cost');
+  assert.equal(cost.value, 40);
+  assert.deepEqual(cost.slices.map(slice => slice.provider), ['codex', 'claude']);
+  const tokens = model.totalSpend(spend, { ...settings, showCursor: true }, 'last30', 'tokens');
+  assert.deepEqual(tokens.slices.map(slice => slice.provider), ['cursor', 'claude', 'codex']);
+  assert.equal(model.totalSpend(spend, settings, 'last30', 'rate').value, 40 / 5);
+  assert.equal(model.totalSpend(spend, settings, 'today', 'cost').slices.length, 0);
 });

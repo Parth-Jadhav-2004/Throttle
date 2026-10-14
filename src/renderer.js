@@ -4,18 +4,23 @@ const { PROVIDER_META } = model;
 
 const PROVIDER_IDS = ['claude', 'codex', 'cursor', 'antigravity'];
 const MAX_STARRED = 2;
-const MAX_VIEW_HEIGHT = 600;
-const PRIMARY_METRICS = 3;
+const MAX_VIEW_HEIGHT = 640;
 const TICK_MS = 15 * 1000;
 const TIP_DELAY_MS = 380;
+const UNDO_LIMIT = 30;
+const LAYOUT_KEYS = [
+  'providerOrder', 'showClaude', 'showCodex', 'showCursor', 'showAntigravity',
+  'hiddenMetrics', 'starredMetrics', 'placements', 'taskbarHiddenProviders'
+];
 const CONNECT_LABELS = {
   claude: 'Sign in to Claude',
   codex: 'Sign in to Codex',
   cursor: 'Open Cursor',
   antigravity: 'Open Antigravity CLI'
 };
-const VIEW_TITLES = { customize: 'Customize', settings: 'Settings' };
-const CODEX_PATH = 'M22.282 9.821a5.985 5.985 0 0 0-.516-4.911 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.182a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.91 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.989 5.989 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zm-9.022 12.608a4.476 4.476 0 0 1-2.876-1.04l.142-.081 4.778-2.758a.795.795 0 0 0 .393-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.495 4.494zM3.599 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.758a.771.771 0 0 0 .781 0l5.843-3.368v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.141-1.646zM2.341 7.896a4.485 4.485 0 0 1 2.365-1.972V11.6a.766.766 0 0 0 .388.676l5.814 3.355-2.02 1.168a.076.076 0 0 1-.071 0L4.0 14.014A4.504 4.504 0 0 1 2.34 7.872zm16.596 3.855-5.833-3.387 2.015-1.164a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.104v-5.677a.79.79 0 0 0-.407-.667zm2.011-3.023-.142-.085-4.773-2.782a.776.776 0 0 0-.786 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061L14.268 4.05a4.5 4.5 0 0 1 6.68 4.66zM8.307 12.863l-2.02-1.164a.08.08 0 0 1-.038-.057V6.074a4.5 4.5 0 0 1 7.375-3.454l-.142.081L8.704 5.459a.795.795 0 0 0-.393.681zm1.097-2.365 2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z';
+const SPEND_METRICS = { cost: 'Cost', rate: 'Cost/MTok', tokens: 'Tokens' };
+const SPEND_PERIOD_LABELS = { today: 'today', yesterday: 'yesterday', last30: 'in the last 30 days' };
+const DEPTH = { welcome: 0, dashboard: 0, customize: 1, settings: 1, about: 1, provider: 2 };
 const ICONS = {
   flame: '<svg viewBox="0 0 24 24" class="ico-fill"><path d="M12 2c1 3.5 5 6 5 11a5 5 0 0 1-10 0c0-2 .8-3.6 2-4.8.2 1.6 1 2.8 2.2 3.3C10.6 8.6 11 5 12 2z"/></svg>',
   warn: '<svg viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
@@ -23,16 +28,24 @@ const ICONS = {
   grip: '<svg viewBox="0 0 24 24" class="ico-fill"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>',
   chevron: '<svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>',
   caret: '<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg>',
+  up: '<svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></svg>',
+  down: '<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m6 13 6 6 6-6"/></svg>',
   external: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>'
 };
 
-let state = { settings: {}, providers: {}, nextRefreshAt: null, version: '' };
+let state = { settings: {}, providers: {}, spend: {}, nextRefreshAt: null, version: '' };
 let view = 'dashboard';
 let detailProvider = null;
-let menuContext = null;
+let menuOpen = false;
 let tipTimer = null;
+let toastTimer = null;
 let sizeFrame = 0;
 let recordingShortcut = false;
+let hoveredSlice = null;
+let welcomeChoices = null;
+let resetArmed = false;
+const undoStack = [];
 
 function nowSec() {
   return Date.now() / 1000;
@@ -57,65 +70,199 @@ function el(tag, className, html) {
   return node;
 }
 
-function logoMarkup(id) {
-  if (id === 'codex') return `<svg viewBox="0 0 24 24" class="ico-fill"><path d="${CODEX_PATH}"/></svg>`;
-  if (id === 'antigravity') return '<img src="assets/antigravity.png" alt="">';
-  return `<img src="assets/${id}.svg" alt="">`;
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
 function logoTile(id, size = '') {
-  const tile = el('span', `logo-tile logo-${id} ${size}`.trim(), logoMarkup(id));
+  const tile = el('span', `logo-tile logo-${id} ${size}`.trim());
+  const glyph = el('span', 'logo-glyph');
+  glyph.style.setProperty('--logo', `url("assets/${id}.svg")`);
+  tile.append(glyph);
   tile.setAttribute('aria-hidden', 'true');
   return tile;
 }
 
+function layoutSnapshot() {
+  return Object.fromEntries(LAYOUT_KEYS.map(key => [key, structuredClone(state.settings[key])]));
+}
+
 function update(patch) {
+  if (LAYOUT_KEYS.some(key => key in patch)) {
+    undoStack.push(layoutSnapshot());
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  }
   state.settings = { ...state.settings, ...patch };
   renderAll();
   return window.widget.updateSettings(patch);
 }
 
-function toggleListValue(list, value, on, limit = Infinity) {
+function undo() {
+  const previous = undoStack.pop();
+  if (!previous) return showToast('Nothing to undo');
+  state.settings = { ...state.settings, ...previous };
+  renderAll();
+  void window.widget.updateSettings(previous);
+  showToast('Undid last change');
+}
+
+function toggleListValue(list, value, on) {
   const next = (list || []).filter(item => item !== value);
   if (on) next.push(value);
-  return next.slice(-limit);
+  return next;
 }
 
-function providerMetrics(id) {
-  const hidden = new Set(state.settings.hiddenMetrics || []);
-  return model.metricsForProvider(id, state.providers[id]?.data)
-    .filter(m => !hidden.has(model.metricKey(id, m.id)));
+function toggleStar(id, key) {
+  const starred = state.settings.starredMetrics || [];
+  if (starred.includes(key)) return update({ starredMetrics: starred.filter(item => item !== key) });
+  const mine = starred.filter(item => item.startsWith(`${id}:`));
+  const drop = mine.length >= MAX_STARRED ? mine[0] : null;
+  return update({ starredMetrics: [...starred.filter(item => item !== drop), key] });
 }
 
-// ---------- Dashboard ----------
+function setPlacement(key, placement) {
+  update({ placements: { ...(state.settings.placements || {}), [key]: placement } });
+}
 
-function ensureCard(id) {
+function catalogFor(id) {
+  return model.metricCatalog(id, state.providers[id]?.data).map(entry => {
+    const key = model.metricKey(id, entry.id);
+    return { ...entry, key, placement: model.placementFor(key, entry, state.settings) };
+  });
+}
+
+// ---------- Total spend ----------
+
+function spendSummary(id) {
+  return state.spend?.[id]?.summary || null;
+}
+
+function anySpend() {
+  return visibleProviders().some(id => spendSummary(id));
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const CIRCUMFERENCE = 2 * Math.PI * 46;
+
+function renderSpendCard() {
+  const card = $('spend-card');
+  const show = state.settings.showTotalSpend !== false && anySpend();
+  card.hidden = !show;
+  if (!show) return;
+  const metric = state.settings.spendMetric || 'cost';
+  const period = state.settings.spendPeriod || 'last30';
+  $('spend-metric-label').textContent = SPEND_METRICS[metric];
+  const total = model.totalSpend(state.spend, state.settings, period, metric);
+  const weights = total.slices.map(slice => (metric === 'tokens' ? slice.period.tokens : slice.period.cost));
+  const weightSum = weights.reduce((sum, value) => sum + value, 0);
+
+  const group = $('donut-slices');
+  const existing = new Map([...group.children].map(node => [node.dataset.provider, node]));
+  const gap = total.slices.length > 1 ? 2.2 : 0;
+  let offset = 0;
+  const seen = new Set();
+  total.slices.forEach((slice, index) => {
+    const fraction = weightSum ? weights[index] / weightSum : 0;
+    const length = Math.max(0, fraction * CIRCUMFERENCE - gap);
+    let circle = existing.get(slice.provider);
+    if (!circle) {
+      circle = document.createElementNS(SVG_NS, 'circle');
+      circle.setAttribute('cx', '60');
+      circle.setAttribute('cy', '60');
+      circle.setAttribute('r', '46');
+      circle.setAttribute('class', 'donut-slice');
+      circle.dataset.provider = slice.provider;
+      circle.style.stroke = PROVIDER_META[slice.provider].color;
+      circle.style.strokeDasharray = `0 ${CIRCUMFERENCE}`;
+      circle.addEventListener('mouseenter', () => setHoveredSlice(slice.provider));
+      circle.addEventListener('mouseleave', () => setHoveredSlice(null));
+      group.append(circle);
+      void circle.getBoundingClientRect();
+    }
+    seen.add(slice.provider);
+    circle.style.strokeDasharray = `${length} ${CIRCUMFERENCE - length}`;
+    circle.style.strokeDashoffset = String(-offset);
+    circle.classList.toggle('is-dim', Boolean(hoveredSlice && hoveredSlice !== slice.provider));
+    offset += fraction * CIRCUMFERENCE;
+  });
+  for (const [provider, node] of existing) if (!seen.has(provider)) node.remove();
+
+  const focus = hoveredSlice && total.slices.find(slice => slice.provider === hoveredSlice);
+  const centerValue = focus ? focus.value : total.value;
+  $('donut-value').textContent = weightSum || centerValue ? model.formatSpendValue(centerValue, metric) : '—';
+  $('donut-unit').textContent = focus ? PROVIDER_META[focus.provider].name : (weightSum ? model.spendUnit(metric) : `no usage ${period === 'last30' ? 'yet' : SPEND_PERIOD_LABELS[period]}`);
+  $('donut-value').dataset.tip = weightSum ? model.formatSpendValue(centerValue, metric, true) : '';
+
+  const legend = $('spend-legend');
+  legend.replaceChildren(...total.slices.map(slice => {
+    const share = weightSum ? Math.round(((metric === 'tokens' ? slice.period.tokens : slice.period.cost) / weightSum) * 100) : 0;
+    const row = el('li', `legend-row${hoveredSlice === slice.provider ? ' is-hot' : ''}`);
+    row.dataset.provider = slice.provider;
+    row.style.setProperty('--dot', PROVIDER_META[slice.provider].color);
+    row.append(
+      el('span', 'legend-dot'),
+      el('span', 'legend-name', PROVIDER_META[slice.provider].name),
+      el('span', 'legend-share', `${share}%`),
+      el('span', 'legend-value', escapeHtml(model.formatSpendValue(slice.value, metric)))
+    );
+    row.dataset.tip = breakdownTip(slice.period);
+    row.addEventListener('mouseenter', () => setHoveredSlice(slice.provider));
+    row.addEventListener('mouseleave', () => setHoveredSlice(null));
+    return row;
+  }));
+  if (!total.slices.length) legend.append(el('li', 'legend-empty', `No spend ${SPEND_PERIOD_LABELS[period]}`));
+
+  const providers = visibleProviders().filter(id => model.SPEND_PROVIDERS.includes(id)).map(id => PROVIDER_META[id].name);
+  const unpriced = visibleProviders().flatMap(id => spendSummary(id)?.unpriced || []);
+  $('spend-info').dataset.tip = [
+    `Spend across ${providers.join(', ')}.`,
+    'Claude and Codex are estimated from local logs at API list prices. Cursor shows the cost Cursor reports.',
+    unpriced.length ? `No price for: ${unpriced.slice(0, 4).join(', ')}${unpriced.length > 4 ? '…' : ''}` : ''
+  ].filter(Boolean).join('\n');
+  syncSeg(card.querySelector('.seg'));
+}
+
+function setHoveredSlice(provider) {
+  if (hoveredSlice === provider) return;
+  hoveredSlice = provider;
+  renderSpendCard();
+}
+
+function breakdownTip(period) {
+  if (!period?.models?.length) return '';
+  const lines = period.models.slice(0, 6).map(m => `${m.name}  ${model.formatMoney(m.cost)} · ${model.formatTokens(m.tokens)}`);
+  if (period.models.length > 6) lines.push(`+${period.models.length - 6} more`);
+  return lines.join('\n');
+}
+
+// ---------- Provider sections ----------
+
+function ensureSection(id) {
   const host = $('cards');
-  let card = host.querySelector(`.card[data-provider="${id}"]`);
-  if (card) return card;
-  card = el('article', 'card');
-  card.dataset.provider = id;
-  card.style.setProperty('--brand', PROVIDER_META[id].color);
+  let section = host.querySelector(`.provider-section[data-provider="${id}"]`);
+  if (section) return section;
+  section = el('section', 'provider-section');
+  section.dataset.provider = id;
+  section.style.setProperty('--brand', PROVIDER_META[id].color);
 
-  const head = el('header', 'card-head');
-  head.append(logoTile(id));
-  const title = el('div', 'card-title');
-  title.append(el('strong', '', PROVIDER_META[id].name), el('span', 'plan'));
-  const status = el('div', 'card-status');
+  const head = el('header', 'section-head');
+  const grip = el('span', 'grip', ICONS.grip);
+  grip.title = 'Drag to reorder';
+  grip.addEventListener('pointerdown', event => startDrag(event, section, host, '.provider-section'));
+  head.append(grip, logoTile(id, 'mini'), el('strong', 'section-name', PROVIDER_META[id].name), el('span', 'plan'));
+  const status = el('span', 'section-status');
   const warn = el('span', 'warn-badge', ICONS.warn);
   warn.hidden = true;
   status.append(el('span', 'spinner'), warn);
-  head.append(title, status);
+  head.append(status);
 
-  const metrics = el('div', 'metrics');
+  const card = el('article', 'card');
   const notice = el('div', 'notice');
   notice.hidden = true;
-
   const more = el('div', 'card-more');
   const moreInner = el('div', 'card-more-inner');
-  moreInner.append(el('div', 'metrics more-metrics'), el('div', 'meta'), el('div', 'links'));
+  moreInner.append(el('div', 'rows more-rows'), el('div', 'meta'), el('div', 'links'));
   more.append(moreInner);
-
   const caret = el('button', 'caret', `<span class="more-count"></span>${ICONS.caret}`);
   caret.type = 'button';
   caret.setAttribute('aria-label', `More ${PROVIDER_META[id].name} details`);
@@ -123,17 +270,28 @@ function ensureCard(id) {
     const open = !(state.settings.expandedProviders || []).includes(id);
     update({ expandedProviders: toggleListValue(state.settings.expandedProviders, id, open) });
   });
-
-  card.append(head, metrics, notice, more, caret);
-  host.append(card);
-  return card;
+  card.append(el('div', 'rows main-rows'), notice, more, caret);
+  section.append(head, card);
+  host.append(section);
+  return section;
 }
 
-function ensureMetricRow(host, m) {
-  let row = host.querySelector(`.metric[data-metric="${CSS.escape(m.id)}"]`);
+function ensureRow(host, entry, className, build) {
+  let row = host.querySelector(`[data-key="${CSS.escape(entry.key)}"]`);
+  if (row && !row.classList.contains(className)) {
+    row.remove();
+    row = null;
+  }
   if (row) return row;
-  row = el('div', 'metric');
-  row.dataset.metric = m.id;
+  row = build();
+  row.classList.add(className);
+  row.dataset.key = entry.key;
+  for (const button of row.querySelectorAll('button')) button.type = 'button';
+  return row;
+}
+
+function buildMeterRow() {
+  const row = el('div', 'row metric');
   const top = el('div', 'metric-top');
   top.append(el('span', 'metric-name'), el('span', 'star-mark', ICONS.star), el('button', 'metric-note'));
   const bar = el('div', 'bar');
@@ -141,12 +299,10 @@ function ensureMetricRow(host, m) {
   const bottom = el('div', 'metric-bottom');
   bottom.append(el('button', 'metric-value'), el('button', 'metric-reset'));
   row.append(top, bar, bottom);
-  for (const button of row.querySelectorAll('button')) button.type = 'button';
-  host.append(row);
   return row;
 }
 
-function renderMetricRow(row, id, m) {
+function renderMeterRow(row, id, m) {
   const mode = state.settings.valueMode || 'left';
   const resetMode = state.settings.resetMode || 'relative';
   const clock = state.settings.clock || 'system';
@@ -156,7 +312,6 @@ function renderMetricRow(row, id, m) {
   const showPacing = pace && (pace.tone !== 'ok' || state.settings.alwaysShowPacing);
 
   row.dataset.tone = pace?.tone || 'ok';
-  row.dataset.key = key;
   row.querySelector('.metric-name').textContent = m.label;
   row.querySelector('.star-mark').hidden = !(state.settings.starredMetrics || []).includes(key);
 
@@ -168,8 +323,7 @@ function renderMetricRow(row, id, m) {
   note.dataset.tip = model.formatPaceDetail(pace);
   note.classList.toggle('is-clickable', pace?.verdict === 'over' && Boolean(pace.runOutAt));
 
-  const fill = row.querySelector('.fill');
-  fill.style.width = `${percent}%`;
+  row.querySelector('.fill').style.width = `${percent}%`;
   const tick = row.querySelector('.tick');
   const tickAt = pace?.evenPace != null && m.usedPercent > 0 && showPacing
     ? (mode === 'used' ? pace.evenPace : 100 - pace.evenPace)
@@ -179,35 +333,97 @@ function renderMetricRow(row, id, m) {
   row.querySelector('.bar').dataset.tip = model.formatPaceDetail(pace);
 
   const value = row.querySelector('.metric-value');
-  value.textContent = model.formatValue(m, mode);
+  if (!value.dataset.hovering) value.textContent = model.formatValue(m, mode);
+  value.dataset.main = model.formatValue(m, mode);
   value.dataset.alt = model.formatValue(m, mode === 'used' ? 'left' : 'used');
-  value.dataset.main = value.textContent;
-  if (m.detail) value.dataset.tip = m.detail;
+  value.dataset.tip = m.detail || '';
 
   const reset = row.querySelector('.metric-reset');
-  reset.textContent = model.formatReset(m.resetsAt, resetMode, nowSec(), clock);
-  reset.dataset.main = reset.textContent;
+  const resetText = model.formatReset(m.resetsAt, resetMode, nowSec(), clock);
+  if (!reset.dataset.hovering) reset.textContent = resetText;
+  reset.dataset.main = resetText;
   reset.dataset.alt = model.formatReset(m.resetsAt, resetMode === 'relative' ? 'absolute' : 'relative', nowSec(), clock);
   reset.hidden = !m.resetsAt;
 }
 
-function renderMetricList(host, id, metrics) {
-  const keep = new Set(metrics.map(m => m.id));
-  for (const child of [...host.children]) {
-    if (!child.classList.contains('metric') || !keep.has(child.dataset.metric)) child.remove();
-  }
-  metrics.forEach((m, index) => {
-    const row = ensureMetricRow(host, m);
-    if (host.children[index] !== row) host.insertBefore(row, host.children[index] || null);
-    renderMetricRow(row, id, m);
+function buildSpendRow() {
+  const row = el('div', 'row spend-row');
+  row.append(el('span', 'spend-label'), el('span', 'spend-value'));
+  return row;
+}
+
+function renderSpendRow(row, entry, summary) {
+  const period = summary?.[entry.id];
+  row.querySelector('.spend-label').textContent = entry.label;
+  const value = row.querySelector('.spend-value');
+  value.textContent = model.formatSpendRow(period);
+  value.classList.toggle('is-empty', !period);
+  value.dataset.tip = breakdownTip(period);
+}
+
+function buildTrendRow() {
+  const row = el('div', 'row trend-row');
+  const head = el('div', 'trend-head');
+  head.append(el('span', 'spend-label', 'Usage Trend'), el('span', 'trend-note'));
+  row.append(head, el('div', 'trend-bars'));
+  return row;
+}
+
+function renderTrendRow(row, id, summary) {
+  const trend = summary?.trend || [];
+  const max = Math.max(1, ...trend.map(day => day.tokens));
+  const bars = row.querySelector('.trend-bars');
+  while (bars.children.length < trend.length) bars.append(el('span', 'trend-bar', '<i></i>'));
+  while (bars.children.length > trend.length) bars.lastChild.remove();
+  trend.forEach((day, index) => {
+    const bar = bars.children[index];
+    const height = day.tokens ? Math.max(6, (day.tokens / max) * 100) : 0;
+    bar.firstChild.style.height = `${height}%`;
+    bar.classList.toggle('is-today', index === trend.length - 1);
+    const date = new Date(`${day.date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    bar.dataset.tip = day.tokens
+      ? `${date} · ${model.formatMoney(day.cost)} · ${model.formatTokens(day.tokens)} tokens`
+      : `${date} · no usage`;
   });
-  host.hidden = !metrics.length;
+  const source = state.spend?.[id]?.source === 'cursor' ? 'Reported by Cursor' : 'Estimated at API rates';
+  row.querySelector('.trend-note').textContent = `30 days · ${source}`;
+}
+
+function renderRows(host, id, entries) {
+  const summary = spendSummary(id);
+  const metrics = model.metricsForProvider(id, state.providers[id]?.data);
+  const rows = [];
+  for (const entry of entries) {
+    if (entry.kind === 'quota') {
+      const m = metrics.find(item => item.id === entry.id);
+      if (!m) continue;
+      const row = ensureRow(host, entry, 'metric', buildMeterRow);
+      renderMeterRow(row, id, m);
+      rows.push(row);
+    } else if (entry.kind === 'spend') {
+      if (!summary) continue;
+      const row = ensureRow(host, entry, 'spend-row', buildSpendRow);
+      renderSpendRow(row, entry, summary);
+      rows.push(row);
+    } else if (entry.kind === 'trend') {
+      if (!summary) continue;
+      const row = ensureRow(host, entry, 'trend-row', buildTrendRow);
+      renderTrendRow(row, id, summary);
+      rows.push(row);
+    }
+  }
+  const keep = new Set(rows);
+  for (const child of [...host.children]) if (!keep.has(child)) child.remove();
+  rows.forEach((row, index) => {
+    if (host.children[index] !== row) host.insertBefore(row, host.children[index] || null);
+  });
+  host.hidden = !rows.length;
+  return rows.length;
 }
 
 function renderNotice(card, id, provider) {
   const notice = card.querySelector('.notice');
-  const hasData = Boolean(provider?.data);
-  if (hasData) {
+  if (provider?.data) {
     notice.hidden = true;
     return;
   }
@@ -232,45 +448,38 @@ function renderNotice(card, id, provider) {
   notice.append(action);
 }
 
-function escapeHtml(text) {
-  return String(text).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-}
-
-function renderCard(id) {
-  const card = ensureCard(id);
+function renderSection(id) {
+  const section = ensureSection(id);
+  const card = section.querySelector('.card');
   const provider = state.providers[id];
   const data = provider?.data;
   const expanded = (state.settings.expandedProviders || []).includes(id);
 
-  card.querySelector('.plan').textContent = data?.planType ? String(data.planType) : '';
-  card.classList.toggle('is-refreshing', Boolean(provider?.refreshing));
-  card.classList.toggle('is-expanded', expanded);
+  section.querySelector('.plan').textContent = data?.planType ? String(data.planType) : '';
+  section.classList.toggle('is-refreshing', Boolean(provider?.refreshing));
+  section.classList.toggle('is-expanded', expanded);
   card.querySelector('.caret').setAttribute('aria-expanded', String(expanded));
-
-  const warn = card.querySelector('.warn-badge');
+  const warn = section.querySelector('.warn-badge');
   warn.hidden = !(data && provider.error);
   warn.dataset.tip = provider?.error || '';
 
-  const host = card.querySelector('.metrics');
-  const metrics = providerMetrics(id);
-  renderMetricList(host, id, metrics.slice(0, PRIMARY_METRICS));
-  renderMetricList(card.querySelector('.more-metrics'), id, metrics.slice(PRIMARY_METRICS));
-  card.querySelector('.more-count').textContent = metrics.length > PRIMARY_METRICS
-    ? `${metrics.length - PRIMARY_METRICS} more`
-    : '';
-  if (data && !metrics.length) {
-    host.hidden = false;
-    host.replaceChildren(el('p', 'notice-copy', 'All metrics hidden. Right-click the header to customize.'));
+  const hidden = new Set(state.settings.hiddenMetrics || []);
+  const catalog = catalogFor(id).filter(entry => !hidden.has(entry.key));
+  const mainHost = card.querySelector('.main-rows');
+  const shown = renderRows(mainHost, id, catalog.filter(entry => entry.placement === 'always'));
+  const extra = renderRows(card.querySelector('.more-rows'), id, catalog.filter(entry => entry.placement === 'demand'));
+  card.querySelector('.more-count').textContent = extra && !expanded ? `${extra} more` : '';
+  if (data && !shown && !extra) {
+    mainHost.hidden = false;
+    mainHost.replaceChildren(el('p', 'notice-copy', 'All metrics hidden. Right-click to customize.'));
   }
-
   renderNotice(card, id, provider);
 
-  const meta = card.querySelector('.meta');
   const parts = [];
   if (data?.account) parts.push(escapeHtml(data.account));
   if (provider?.updatedAt) parts.push(`Updated ${model.formatAgo(provider.updatedAt)}`);
   if (provider?.error && data) parts.push(`<span class="meta-error">${escapeHtml(provider.error)}</span>`);
-  meta.innerHTML = parts.join(' · ') || 'Waiting for first refresh';
+  card.querySelector('.meta').innerHTML = parts.join(' · ') || 'Waiting for first refresh';
 
   const links = card.querySelector('.links');
   if (!links.childElementCount) {
@@ -284,17 +493,35 @@ function renderCard(id) {
 }
 
 function renderDashboard() {
-  const order = visibleProviders();
+  renderSpendCard();
   const host = $('cards');
-  for (const card of host.querySelectorAll('.card')) {
-    if (!order.includes(card.dataset.provider)) card.remove();
+  if (host.dataset.dragging) return;
+  const order = visibleProviders();
+  for (const section of host.querySelectorAll('.provider-section')) {
+    if (!order.includes(section.dataset.provider)) section.remove();
   }
   order.forEach((id, index) => {
-    renderCard(id);
-    const card = host.querySelector(`.card[data-provider="${id}"]`);
-    if (host.children[index] !== card) host.insertBefore(card, host.children[index] || null);
+    renderSection(id);
+    const section = host.querySelector(`.provider-section[data-provider="${id}"]`);
+    if (host.children[index] !== section) host.insertBefore(section, host.children[index] || null);
   });
   $('empty').hidden = order.length > 0;
+}
+
+// ---------- Welcome ----------
+
+function renderWelcome() {
+  const host = $('welcome-list');
+  welcomeChoices ||= Object.fromEntries(PROVIDER_IDS.map(id => [id, state.detected ? Boolean(state.detected[id]) : true]));
+  host.replaceChildren(...PROVIDER_IDS.map(id => {
+    const row = el('div', 'list-row welcome-row');
+    const copy = el('span', 'row-copy');
+    copy.append(el('span', 'row-title', PROVIDER_META[id].name), el('span', 'row-sub', state.detected?.[id] ? 'Found on this PC' : 'Not found'));
+    const main = el('span', 'row-main');
+    main.append(logoTile(id, 'small'), copy);
+    row.append(main, switchButton(welcomeChoices[id], `Track ${PROVIDER_META[id].name}`, on => { welcomeChoices[id] = on; }));
+    return row;
+  }));
 }
 
 // ---------- Customize ----------
@@ -310,7 +537,7 @@ function renderCustomize() {
       row.dataset.provider = id;
       const grip = el('span', 'grip', ICONS.grip);
       grip.title = 'Drag to reorder';
-      grip.addEventListener('pointerdown', event => startDrag(event, row, host));
+      grip.addEventListener('pointerdown', event => startDrag(event, row, host, '.provider-row'));
       const open = el('button', 'row-main');
       open.type = 'button';
       const copy = el('span', 'row-copy');
@@ -321,11 +548,12 @@ function renderCustomize() {
     }
     if (host.children[index] !== row) host.insertBefore(row, host.children[index] || null);
     const enabled = isEnabled(id);
-    const catalog = model.metricCatalog(id, state.providers[id]?.data);
+    const catalog = catalogFor(id);
     const hidden = state.settings.hiddenMetrics || [];
-    const shown = catalog.filter(m => !hidden.includes(model.metricKey(id, m.id))).length;
+    const shown = catalog.filter(entry => !hidden.includes(entry.key));
+    const always = shown.filter(entry => entry.placement === 'always').length;
     row.classList.toggle('is-off', !enabled);
-    row.querySelector('.row-sub').textContent = catalog.length ? `${shown} of ${catalog.length} metrics shown` : 'Metrics appear after first refresh';
+    row.querySelector('.row-sub').textContent = `${always} always visible · ${shown.length - always} on demand`;
     row.querySelector('.switch').setAttribute('aria-checked', String(enabled));
   });
 }
@@ -345,14 +573,15 @@ function switchButton(on, label, onChange) {
   return button;
 }
 
-function startDrag(event, row, host) {
+function startDrag(event, row, host, selector) {
   event.preventDefault();
-  const rows = () => [...host.querySelectorAll('.provider-row')];
+  const rows = () => [...host.querySelectorAll(selector)];
   const grabOffset = event.clientY - row.getBoundingClientRect().top;
   let translate = 0;
   host.dataset.dragging = '1';
   row.classList.add('is-dragging');
   row.setPointerCapture(event.pointerId);
+  hideTip();
 
   const flip = before => {
     for (const r of rows()) {
@@ -392,8 +621,11 @@ function startDrag(event, row, host) {
     row.classList.remove('is-dragging');
     row.style.transform = '';
     delete host.dataset.dragging;
-    const order = rows().map(r => r.dataset.provider);
-    if (order.join() !== (state.settings.providerOrder || []).join()) update({ providerOrder: order });
+    const moved = rows().map(r => r.dataset.provider);
+    const full = state.settings.providerOrder || PROVIDER_IDS;
+    const queue = [...moved];
+    const order = full.map(id => (moved.includes(id) ? queue.shift() : id));
+    if (order.join() !== full.join()) update({ providerOrder: order });
   };
 
   row.addEventListener('pointermove', onMove);
@@ -411,6 +643,7 @@ function renderProvider() {
   const id = detailProvider;
   if (!id) return;
   const provider = state.providers[id];
+  $('provider-title').textContent = PROVIDER_META[id].name;
   const hero = $('provider-hero');
   hero.replaceChildren(logoTile(id, 'large'));
   const copy = el('div', 'hero-copy');
@@ -420,55 +653,73 @@ function renderProvider() {
   copy.append(el('strong', '', PROVIDER_META[id].name), el('span', '', escapeHtml(status)));
   hero.append(copy, switchButton(isEnabled(id), `Show ${PROVIDER_META[id].name}`, on => update({ [settingKey(id)]: on })));
 
-  const host = $('provider-metrics');
-  if (host.dataset.provider !== id) {
-    host.replaceChildren();
-    host.dataset.provider = id;
+  const taskbar = $('provider-taskbar');
+  taskbar.replaceChildren();
+  const taskbarRow = el('div', 'list-row metric-setting');
+  const onTaskbar = !(state.settings.taskbarHiddenProviders || []).includes(id);
+  taskbarRow.append(
+    el('span', 'row-title', 'Show on taskbar'),
+    switchButton(onTaskbar, 'Show on taskbar', on => update({ taskbarHiddenProviders: toggleListValue(state.settings.taskbarHiddenProviders, id, !on) }))
+  );
+  taskbar.append(taskbarRow);
+  taskbar.hidden = !state.stripSupported || state.settings.taskbarStyle === 'off';
+
+  const catalog = catalogFor(id);
+  const quota = model.metricsForProvider(id, provider?.data);
+  const taskbarKeys = new Set(model.starredFor(id, quota, state.settings).map(m => model.metricKey(id, m.id)));
+  for (const placement of ['always', 'demand']) {
+    const host = $(`provider-${placement}`);
+    const entries = catalog.filter(entry => entry.placement === placement);
+    host.replaceChildren(...entries.map(entry => metricSettingRow(id, entry, taskbarKeys)));
+    if (!entries.length) host.append(el('div', 'list-empty', placement === 'always' ? 'Nothing pinned here' : 'Nothing tucked away'));
   }
-  const catalog = model.metricCatalog(id, provider?.data);
-  const keys = catalog.map(m => model.metricKey(id, m.id));
-  for (const row of host.querySelectorAll('.metric-setting')) if (!keys.includes(row.dataset.key)) row.remove();
-  catalog.forEach((m, index) => {
-    const key = keys[index];
-    let row = host.querySelector(`.metric-setting[data-key="${CSS.escape(key)}"]`);
-    if (!row) {
-      row = el('div', 'list-row metric-setting');
-      row.dataset.key = key;
-      const star = el('button', 'star-btn', ICONS.star);
-      star.type = 'button';
-      star.addEventListener('click', () => {
-        const on = !(state.settings.starredMetrics || []).includes(key);
-        update({ starredMetrics: toggleListValue(state.settings.starredMetrics, key, on, MAX_STARRED) });
-      });
-      row.append(el('span', 'row-title'), star, switchButton(true, `Show ${m.label}`, on => {
-        update({ hiddenMetrics: toggleListValue(state.settings.hiddenMetrics, key, !on) });
-      }));
-    }
-    if (host.children[index] !== row) host.insertBefore(row, host.children[index] || null);
-    const starred = (state.settings.starredMetrics || []).includes(key);
-    row.querySelector('.row-title').textContent = m.label;
-    const star = row.querySelector('.star-btn');
-    star.classList.toggle('is-on', starred);
-    star.title = starred ? 'Remove from tray icon' : 'Show in tray icon';
-    row.querySelector('.switch').setAttribute('aria-checked', String(!(state.settings.hiddenMetrics || []).includes(key)));
-  });
   $('provider-metrics-empty').hidden = catalog.length > 0;
   $('provider-connect').textContent = CONNECT_LABELS[id];
 }
 
+function metricSettingRow(id, entry, taskbarKeys) {
+  const row = el('div', 'list-row metric-setting');
+  row.dataset.key = entry.key;
+  const hidden = (state.settings.hiddenMetrics || []).includes(entry.key);
+  row.classList.toggle('is-off', hidden);
+  const title = el('span', 'row-title', escapeHtml(entry.label));
+  if (entry.kind !== 'quota') title.append(el('span', 'row-kind', entry.kind === 'trend' ? 'chart' : 'spend'));
+  row.append(title);
+  if (entry.kind === 'quota') {
+    const explicit = (state.settings.starredMetrics || []).includes(entry.key);
+    const star = el('button', `star-btn${explicit ? ' is-on' : taskbarKeys.has(entry.key) ? ' is-auto' : ''}`, ICONS.star);
+    star.type = 'button';
+    star.dataset.tip = explicit ? 'On the taskbar · click to unstar' : taskbarKeys.has(entry.key) ? 'On the taskbar by default · click to star' : 'Show on the taskbar';
+    star.addEventListener('click', () => toggleStar(id, entry.key));
+    row.append(star);
+  }
+  const move = el('button', 'star-btn', entry.placement === 'always' ? ICONS.down : ICONS.up);
+  move.type = 'button';
+  move.dataset.tip = entry.placement === 'always' ? 'Move to On demand' : 'Move to Always visible';
+  move.addEventListener('click', () => setPlacement(entry.key, entry.placement === 'always' ? 'demand' : 'always'));
+  row.append(move, switchButton(!hidden, `Show ${entry.label}`, on => {
+    update({ hiddenMetrics: toggleListValue(state.settings.hiddenMetrics, entry.key, !on) });
+  }));
+  return row;
+}
+
 // ---------- Settings ----------
+
+function syncSeg(seg) {
+  const value = state.settings[seg.dataset.setting];
+  for (const button of seg.querySelectorAll('button')) button.setAttribute('aria-pressed', String(button.dataset.value === value));
+  positionSegIndicator(seg);
+}
 
 function renderSettings() {
   const s = state.settings;
-  for (const seg of document.querySelectorAll('.seg')) {
-    const value = s[seg.dataset.setting];
-    const buttons = [...seg.querySelectorAll('button')];
-    buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.value === value)));
-    positionSegIndicator(seg);
-  }
+  for (const seg of document.querySelectorAll('#view-settings .seg')) syncSeg(seg);
   for (const toggle of document.querySelectorAll('.switch[data-setting]')) {
     toggle.setAttribute('aria-checked', String(Boolean(s[toggle.dataset.setting])));
   }
+  const supported = state.stripSupported !== false;
+  $('taskbar-field').classList.toggle('is-disabled', !supported);
+  $('taskbar-help').textContent = supported ? 'Starred meters, next to the clock' : 'Not available on this taskbar';
   if (!recordingShortcut) $('shortcut').textContent = formatAccelerator(s.shortcut);
   const select = $('refresh-seconds');
   if (![...select.options].some(option => Number(option.value) === s.refreshSeconds) && s.refreshSeconds) {
@@ -487,7 +738,7 @@ function positionSegIndicator(seg) {
   const active = seg.querySelector('button[aria-pressed="true"]');
   if (!active || !active.offsetWidth) return;
   indicator.style.width = `${active.offsetWidth}px`;
-  indicator.style.transform = `translateX(${active.offsetLeft}px)`;
+  indicator.style.transform = `translateX(${active.offsetLeft - 2}px)`;
 }
 
 function formatAccelerator(accelerator) {
@@ -545,13 +796,11 @@ async function handleShortcutKey(event) {
   stopRecording('Saved');
 }
 
-// ---------- Footer, tray, ticking ----------
+// ---------- Footer and tray ----------
 
 function renderFooter() {
   const anyRefreshing = PROVIDER_IDS.some(id => state.providers[id]?.refreshing);
-  const button = $('next-update');
-  button.classList.toggle('is-refreshing', anyRefreshing);
-  $('btn-refresh').classList.toggle('is-spinning', anyRefreshing);
+  $('next-update').classList.toggle('is-refreshing', anyRefreshing);
   if (anyRefreshing) {
     $('next-update-text').textContent = 'Updating…';
   } else if (state.nextRefreshAt) {
@@ -560,7 +809,7 @@ function renderFooter() {
   } else {
     $('next-update-text').textContent = 'Refresh now';
   }
-  $('version').textContent = state.version ? `v${state.version}` : '';
+  $('footer-brand').textContent = `Throttle ${state.version || ''}`.trim();
 }
 
 const TONE_COLORS = { ok: '#34c77b', warn: '#f2b13a', danger: '#f0564a' };
@@ -579,9 +828,8 @@ function drawTrayImage(entries, size, dark) {
   const width = size - inset * 2;
   let y = Math.round((size - total) / 2);
   const round = (x, top, w, h) => {
-    const r = Math.min(h / 2, w / 2);
     ctx.beginPath();
-    ctx.roundRect(x, top, w, h, r);
+    ctx.roundRect(x, top, w, h, Math.min(h / 2, w / 2));
     ctx.fill();
   };
   for (const entry of entries) {
@@ -605,24 +853,30 @@ function renderTray() {
   const tooltip = model.trayTooltip(entries, mode);
   const dark = state.taskbarDark !== false;
   const signature = JSON.stringify([
-    state.settings.trayStyle,
-    dark,
-    mode,
+    state.settings.trayStyle, dark, mode,
     entries.map(entry => [entry.key, Math.round(entry.metric.usedPercent), entry.pace?.tone])
   ]);
   if (signature === lastTraySignature) return;
   lastTraySignature = signature;
   const images = state.settings.trayStyle === 'logo' || !entries.length
     ? []
-    : [[1, 16], [1.25, 20], [1.5, 24], [2, 32]].map(([scale, size]) => ({
-        scale,
-        dataUrl: drawTrayImage(entries.slice(0, MAX_STARRED), size, dark)
-      }));
+    : [[1, 16], [1.25, 20], [1.5, 24], [2, 32]].map(([scale, size]) => ({ scale, dataUrl: drawTrayImage(entries, size, dark) }));
   window.widget.setTrayImage({ images, tooltip });
 }
 
+function applyAppearance() {
+  const root = document.documentElement;
+  const s = state.settings;
+  root.dataset.theme = s.theme || 'system';
+  root.classList.toggle('density-compact', s.density === 'compact');
+  root.classList.toggle('reduce-motion', Boolean(s.reduceAnimations));
+  root.classList.toggle('more-transparent', Boolean(s.transparency));
+}
+
 function renderAll() {
-  document.documentElement.dataset.theme = state.settings.theme || 'system';
+  applyAppearance();
+  if (!state.settings.welcomed && state.settings.welcomed !== undefined && view === 'dashboard') setView('welcome');
+  if (view === 'welcome') renderWelcome();
   renderDashboard();
   if (view === 'customize') renderCustomize();
   if (view === 'provider') renderProvider();
@@ -637,21 +891,19 @@ function renderAll() {
 function setView(next) {
   const previous = view;
   view = next;
-  const app = $('app');
-  app.dataset.view = next;
-  const depth = { dashboard: 0, customize: 1, settings: 1, provider: 2 };
+  $('app').dataset.view = next;
   for (const section of document.querySelectorAll('.view')) {
     const name = section.id.replace('view-', '');
-    section.classList.toggle('is-active', name === next);
-    const relative = depth[name] - depth[next];
-    section.dataset.pos = name === next ? 'center' : relative < 0 ? 'left' : 'right';
-    if (name !== next) section.setAttribute('inert', '');
-    else section.removeAttribute('inert');
+    const relative = DEPTH[name] - DEPTH[next];
+    section.dataset.pos = name === next ? 'center' : relative < 0 || (relative === 0 && name === 'welcome') ? 'left' : 'right';
+    section.toggleAttribute('inert', name !== next);
   }
-  $('view-title').textContent = next === 'provider' ? PROVIDER_META[detailProvider]?.name || '' : VIEW_TITLES[next] || '';
   if (next === 'customize') renderCustomize();
-  if (next === 'settings') requestAnimationFrame(() => document.querySelectorAll('.seg').forEach(positionSegIndicator));
+  if (next === 'welcome') renderWelcome();
+  if (next === 'settings') requestAnimationFrame(() => document.querySelectorAll('#view-settings .seg').forEach(positionSegIndicator));
   if (previous !== next) $(`view-${next}`).querySelector('.view-inner').scrollTop = 0;
+  resetArmed = false;
+  $('reset-all').textContent = 'Reset';
   hideMenu();
   hideTip();
   scheduleSize();
@@ -659,7 +911,7 @@ function setView(next) {
 
 function back() {
   if (view === 'provider') setView('customize');
-  else if (view !== 'dashboard') setView('dashboard');
+  else if (view !== 'dashboard' && view !== 'welcome') setView('dashboard');
 }
 
 function scheduleSize() {
@@ -669,12 +921,11 @@ function scheduleSize() {
 
 function applySize() {
   const inner = $(`view-${view}`).querySelector('.view-inner');
-  const maxHeight = Math.min(MAX_VIEW_HEIGHT, window.screen.availHeight - 160);
+  const maxHeight = Math.min(MAX_VIEW_HEIGHT, window.screen.availHeight - 140);
   document.documentElement.style.setProperty('--max-view', `${maxHeight}px`);
   const contentHeight = Math.min(inner.scrollHeight, maxHeight);
   $('viewport').style.height = `${contentHeight}px`;
-  const total = $('topbar').offsetHeight + contentHeight + $('footer').offsetHeight;
-  window.widget.reportSize(total);
+  window.widget.reportSize(contentHeight + $('footer').offsetHeight);
 }
 
 const resizeObserver = new ResizeObserver(scheduleSize);
@@ -686,9 +937,9 @@ for (const inner of document.querySelectorAll('.view-inner')) {
   }).observe(inner, { childList: true });
 }
 
-// ---------- Menus and tips ----------
+// ---------- Menus, tips and toasts ----------
 
-function showMenu(items, x, y) {
+function showMenu(items, anchor, { align = 'left', above = false } = {}) {
   const menu = $('menu');
   menu.replaceChildren();
   for (const item of items) {
@@ -696,48 +947,91 @@ function showMenu(items, x, y) {
       menu.append(el('div', 'menu-sep'));
       continue;
     }
-    const button = el('button', `menu-item${item.danger ? ' is-danger' : ''}`, escapeHtml(item.label));
+    const button = el('button', `menu-item${item.danger ? ' is-danger' : ''}${item.submenu ? ' has-sub' : ''}`);
     button.type = 'button';
     button.setAttribute('role', 'menuitem');
+    button.append(el('span', 'menu-check', item.checked ? ICONS.check : ''), el('span', 'menu-label', escapeHtml(item.label)));
+    if (item.hint) button.append(el('span', 'menu-hint', escapeHtml(item.hint)));
+    if (item.submenu) button.append(el('span', 'menu-hint', ICONS.chevron));
+    button.disabled = Boolean(item.disabled);
     button.addEventListener('click', () => {
-      hideMenu();
+      if (item.submenu) {
+        showMenu([{ label: 'Back', action: () => showMenu(items, anchor, { align, above }), keepOpen: true }, 'separator', ...item.submenu], anchor, { align, above });
+        return;
+      }
+      if (!item.keepOpen) hideMenu();
       item.action();
     });
     menu.append(button);
   }
   menu.hidden = false;
+  menu.classList.remove('is-open');
   const rect = menu.getBoundingClientRect();
-  menu.style.left = `${Math.min(x, window.innerWidth - rect.width - 8)}px`;
-  menu.style.top = `${Math.min(y, window.innerHeight - rect.height - 8)}px`;
+  let left = align === 'right' ? anchor.right - rect.width : anchor.left;
+  let top = above ? anchor.top - rect.height - 6 : anchor.bottom + 4;
+  left = Math.max(8, Math.min(left, window.innerWidth - rect.width - 8));
+  top = Math.max(8, Math.min(top, window.innerHeight - rect.height - 8));
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+  menu.style.transformOrigin = `${align === 'right' ? 'right' : 'left'} ${above ? 'bottom' : 'top'}`;
   requestAnimationFrame(() => menu.classList.add('is-open'));
-  menuContext = true;
+  menuOpen = true;
+}
+
+function pointAnchor(x, y) {
+  return { left: x, right: x, top: y, bottom: y };
 }
 
 function hideMenu() {
   const menu = $('menu');
   menu.classList.remove('is-open');
   menu.hidden = true;
-  menuContext = null;
+  menuOpen = false;
 }
 
-function providerMenuItems(id, metricKey) {
+function providerMenuItems(id, key) {
   const name = PROVIDER_META[id].name;
   const items = [];
-  if (metricKey) {
-    const starred = (state.settings.starredMetrics || []).includes(metricKey);
-    items.push(
-      { label: starred ? 'Remove from tray icon' : 'Show in tray icon', action: () => update({ starredMetrics: toggleListValue(state.settings.starredMetrics, metricKey, !starred, MAX_STARRED) }) },
-      { label: 'Hide metric', action: () => update({ hiddenMetrics: toggleListValue(state.settings.hiddenMetrics, metricKey, true) }) },
-      'separator'
-    );
+  if (key) {
+    const entry = catalogFor(id).find(item => item.key === key);
+    if (entry?.kind === 'quota') {
+      const starred = (state.settings.starredMetrics || []).includes(key);
+      items.push({ label: starred ? 'Unstar from taskbar' : 'Star for taskbar', action: () => toggleStar(id, key) });
+    }
+    if (entry) {
+      items.push({
+        label: entry.placement === 'always' ? 'Move to On demand' : 'Move to Always visible',
+        action: () => setPlacement(key, entry.placement === 'always' ? 'demand' : 'always')
+      });
+    }
+    items.push({ label: 'Hide', action: () => { update({ hiddenMetrics: toggleListValue(state.settings.hiddenMetrics, key, true) }); showToast('Hidden · Ctrl+Z to undo'); } }, 'separator');
   }
   items.push(
     { label: `Refresh ${name}`, action: () => window.widget.refresh(id) },
-    { label: `Customize ${name}…`, action: () => { detailProvider = id; renderProvider(); setView('provider'); } },
+    { label: `Copy ${name} screenshot`, action: () => shareScreenshot(id) },
+    { label: `Customize ${name}…`, action: () => openProvider(id) },
     'separator',
-    { label: `Hide ${name}`, danger: true, action: () => update({ [settingKey(id)]: false }) }
+    { label: `Hide ${name}`, danger: true, action: () => { update({ [settingKey(id)]: false }); showToast(`${name} hidden · Ctrl+Z to undo`); } }
   );
   return items;
+}
+
+function optionsMenuItems() {
+  const shareTargets = [];
+  if (!$('spend-card').hidden) shareTargets.push({ label: 'Total Spend', action: () => shareScreenshot('spend') });
+  for (const id of visibleProviders()) shareTargets.push({ label: PROVIDER_META[id].name, action: () => shareScreenshot(id) });
+  return [
+    { label: 'Customize…', hint: '', action: () => setView('customize') },
+    { label: 'Settings…', hint: 'Ctrl+,', action: () => setView('settings') },
+    { label: 'Share Screenshot', submenu: shareTargets.length ? shareTargets : [{ label: 'Nothing to share yet', disabled: true, action: () => {} }] },
+    { label: 'Refresh All', hint: 'Ctrl+R', action: () => window.widget.refresh() },
+    'separator',
+    { label: 'Check for Updates…', action: () => { setView('about'); void checkUpdate(); } },
+    { label: 'Report an Issue…', action: () => window.widget.reportIssue() },
+    { label: 'About Throttle', action: () => setView('about') },
+    'separator',
+    { label: 'Quit Throttle', danger: true, action: () => window.widget.quit() }
+  ];
 }
 
 function showTip(target) {
@@ -760,6 +1054,62 @@ function hideTip() {
   const tip = $('tip');
   tip.classList.remove('is-open');
   tip.hidden = true;
+}
+
+function showToast(text) {
+  const toast = $('toast');
+  toast.textContent = text;
+  toast.hidden = false;
+  requestAnimationFrame(() => toast.classList.add('is-open'));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove('is-open');
+    setTimeout(() => { toast.hidden = true; }, 220);
+  }, 2200);
+}
+
+async function shareScreenshot(target) {
+  if (view !== 'dashboard') setView('dashboard');
+  const node = target === 'spend' ? $('spend-card') : $('cards').querySelector(`.provider-section[data-provider="${target}"]`);
+  if (!node) return;
+  node.scrollIntoView({ block: 'nearest' });
+  const app = $('app');
+  app.classList.add('is-capturing');
+  node.classList.add('capture-target');
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  await new Promise(resolve => setTimeout(resolve, 120));
+  const rect = node.getBoundingClientRect();
+  const pad = 8;
+  const clip = {
+    x: rect.left - pad,
+    y: rect.top - pad,
+    width: rect.width + pad * 2,
+    height: Math.min(rect.height, window.innerHeight - rect.top) + pad * 2
+  };
+  let ok = false;
+  try {
+    ok = await window.widget.copyScreenshot(clip);
+  } finally {
+    app.classList.remove('is-capturing');
+    node.classList.remove('capture-target');
+  }
+  showToast(ok ? 'Screenshot copied to clipboard' : 'Couldn’t copy screenshot');
+}
+
+async function checkUpdate() {
+  const button = $('check-update');
+  button.disabled = true;
+  $('update-status').textContent = 'Checking for updates…';
+  try {
+    const result = await window.widget.checkForUpdate();
+    $('update-status').textContent = result.available
+      ? `Throttle ${result.latest} is available · opening download`
+      : 'You’re on the latest version';
+  } catch {
+    $('update-status').textContent = 'Update check failed · try again later';
+  } finally {
+    button.disabled = false;
+  }
 }
 
 // ---------- Events ----------
@@ -792,40 +1142,61 @@ $('cards').addEventListener('click', event => {
     update({ valueMode: state.settings.valueMode === 'used' ? 'left' : 'used' });
     return;
   }
-  if (event.target.closest('.metric-reset') || event.target.closest('.metric-note.is-clickable')) {
-    const reset = event.target.closest('.metric-reset');
+  const reset = event.target.closest('.metric-reset');
+  if (reset || event.target.closest('.metric-note.is-clickable')) {
     if (reset) delete reset.dataset.hovering;
     update({ resetMode: state.settings.resetMode === 'absolute' ? 'relative' : 'absolute' });
   }
 });
 
 $('cards').addEventListener('contextmenu', event => {
-  const card = event.target.closest('.card');
-  if (!card) return;
+  const section = event.target.closest('.provider-section');
+  if (!section) return;
   event.preventDefault();
-  const metric = event.target.closest('.metric');
-  showMenu(providerMenuItems(card.dataset.provider, metric?.dataset.key || null), event.clientX, event.clientY);
+  const row = event.target.closest('.row');
+  showMenu(providerMenuItems(section.dataset.provider, row?.dataset.key || null), pointAnchor(event.clientX, event.clientY));
 });
 
 document.addEventListener('contextmenu', event => event.preventDefault());
-
 document.addEventListener('pointerdown', event => {
-  if (menuContext && !event.target.closest('#menu')) hideMenu();
+  if (menuOpen && !event.target.closest('#menu') && !event.target.closest('.pulldown')) hideMenu();
 });
 
-$('btn-back').addEventListener('click', back);
-$('btn-refresh').addEventListener('click', () => window.widget.refresh());
+for (const button of document.querySelectorAll('.back-btn')) button.addEventListener('click', back);
+for (const button of document.querySelectorAll('[data-url]')) button.addEventListener('click', () => window.widget.openExternal(button.dataset.url));
+
 $('next-update').addEventListener('click', () => window.widget.refresh());
-$('btn-customize').addEventListener('click', () => setView(view === 'customize' ? 'dashboard' : 'customize'));
-$('btn-settings').addEventListener('click', () => setView(view === 'settings' ? 'dashboard' : 'settings'));
+$('options-btn').addEventListener('click', event => {
+  if (menuOpen) return hideMenu();
+  showMenu(optionsMenuItems(), event.currentTarget.getBoundingClientRect(), { align: 'right', above: true });
+});
+$('spend-metric').addEventListener('click', event => {
+  if (menuOpen) return hideMenu();
+  const current = state.settings.spendMetric || 'cost';
+  showMenu(Object.entries(SPEND_METRICS).map(([value, label]) => ({
+    label: value === 'rate' ? 'Cost per MTok' : label,
+    checked: value === current,
+    action: () => update({ spendMetric: value })
+  })), event.currentTarget.getBoundingClientRect());
+});
+$('spend-share').addEventListener('click', () => shareScreenshot('spend'));
 $('empty-customize').addEventListener('click', () => setView('customize'));
 $('provider-connect').addEventListener('click', () => detailProvider && window.widget.connect(detailProvider));
 $('provider-reset').addEventListener('click', () => {
   const prefix = `${detailProvider}:`;
+  const placements = Object.fromEntries(Object.entries(state.settings.placements || {}).filter(([key]) => !key.startsWith(prefix)));
   update({
     hiddenMetrics: (state.settings.hiddenMetrics || []).filter(key => !key.startsWith(prefix)),
-    starredMetrics: (state.settings.starredMetrics || []).filter(key => !key.startsWith(prefix))
+    starredMetrics: (state.settings.starredMetrics || []).filter(key => !key.startsWith(prefix)),
+    placements
   });
+});
+$('welcome-done').addEventListener('click', () => {
+  const patch = { welcomed: true };
+  for (const id of PROVIDER_IDS) patch[settingKey(id)] = welcomeChoices?.[id] !== false;
+  update(patch);
+  setView('dashboard');
+  window.widget.refresh();
 });
 
 for (const seg of document.querySelectorAll('.seg')) {
@@ -847,21 +1218,20 @@ $('shortcut').addEventListener('click', () => {
   void window.widget.suspendShortcut(true);
 });
 $('mobile-pairing').addEventListener('click', () => window.widget.openMobilePairing());
-$('quit').addEventListener('click', () => window.widget.quit());
-$('check-update').addEventListener('click', async () => {
-  const button = $('check-update');
-  button.disabled = true;
-  $('update-status').textContent = 'Checking for updates…';
-  try {
-    const result = await window.widget.checkForUpdate();
-    $('update-status').textContent = result.available
-      ? `Throttle ${result.latest} is available · opening download`
-      : `You’re on the latest version`;
-  } catch {
-    $('update-status').textContent = 'Update check failed · try again later';
-  } finally {
-    button.disabled = false;
+$('check-update').addEventListener('click', () => void checkUpdate());
+$('about-issue').addEventListener('click', () => window.widget.reportIssue());
+$('reset-all').addEventListener('click', async () => {
+  if (!resetArmed) {
+    resetArmed = true;
+    $('reset-all').textContent = 'Click to confirm';
+    return;
   }
+  resetArmed = false;
+  $('reset-all').textContent = 'Reset';
+  undoStack.length = 0;
+  state.settings = await window.widget.resetSettings();
+  renderAll();
+  showToast('Settings reset');
 });
 
 document.addEventListener('keydown', event => {
@@ -869,13 +1239,17 @@ document.addEventListener('keydown', event => {
     void handleShortcutKey(event);
     return;
   }
+  const key = event.key.toLowerCase();
   if (event.key === 'Escape') {
-    if (menuContext) hideMenu();
-    else if (view !== 'dashboard') back();
+    if (menuOpen) hideMenu();
+    else if (view !== 'dashboard' && view !== 'welcome') back();
     else window.widget.hide();
-  } else if (event.ctrlKey && event.key.toLowerCase() === 'r') {
+  } else if (event.ctrlKey && key === 'r') {
     event.preventDefault();
     window.widget.refresh();
+  } else if (event.ctrlKey && key === 'z' && !event.target.closest('input, select')) {
+    event.preventDefault();
+    undo();
   } else if (event.ctrlKey && event.key === ',') {
     event.preventDefault();
     setView(view === 'settings' ? 'dashboard' : 'settings');
@@ -890,10 +1264,7 @@ window.widget.onUsageState(next => {
 window.widget.onShown(({ edge, view: requested } = {}) => {
   const app = $('app');
   app.dataset.edge = edge || 'bottom';
-  if (requested && requested !== view) {
-    if (requested === 'provider') return;
-    setView(requested);
-  }
+  if (requested && requested !== view && requested !== 'provider' && DEPTH[requested] != null) setView(requested);
   renderAll();
   app.classList.remove('is-entering');
   app.classList.add('pre-enter');
@@ -908,7 +1279,8 @@ window.widget.onHidden(() => {
   if (recordingShortcut) stopRecording();
   hideMenu();
   hideTip();
-  setView('dashboard');
+  if (view !== 'welcome') setView('dashboard');
+  $('view-dashboard').querySelector('.view-inner').scrollTop = 0;
 });
 
 setInterval(() => {

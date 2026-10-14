@@ -12,7 +12,45 @@ A Windows system-tray app for monitoring **Claude Code**, **Codex**, **Cursor**,
 - 5-hour and weekly Codex limits, when the account reports those windows
 - Antigravity model quota, from the local `agy` CLI session
 
-Click the Throttle icon in the Windows notification area (or press the global shortcut, **Ctrl + Alt + U** by default) to open the usage popup. Each provider gets a card with a bar per limit, a live reset countdown, and a pace verdict: green while you're on course to finish the window with room to spare, amber when the projection lands in the last 10%, and red with a projected run-out time when you'll hit the limit before it resets. The tray icon itself draws your two starred (or most-used) limits as mini bars.
+It also tracks spend, priced from the [LiteLLM](https://github.com/BerriAI/litellm) model price list:
+
+- Claude Code and Codex spend and tokens, read from their local session logs (`~/.claude/projects`, `~/.codex/sessions`)
+- Cursor spend and tokens, from Cursor's own usage-events API
+
+### Taskbar strip
+
+Throttle draws a live strip on the Windows taskbar, just left of the notification area, much like OpenUsage's menu bar item. Each provider shows its logo and two stacked values, which turn amber or red as a limit gets close. Left-click the strip to open the popup above it, and right-click it for the tray menu.
+
+Choose **Text**, **Bars**, or **Off** in **Settings → Taskbar** or in the tray menu's **Taskbar Display** submenu. Each provider's Customize page can hide it from the strip, and stars pick which two metrics it shows.
+
+Windows 11 doesn't deliver mouse input to windows embedded in the taskbar. To make the strip clickable, Throttle runs a low-level mouse hook on a background thread. The hook only handles clicks inside the strip and passes every other mouse event through untouched. The strip is skipped on vertical taskbars.
+
+### Popup
+
+Click the strip or the tray icon, or press the global shortcut (**Ctrl + Alt + U** by default), to open the popup.
+
+- **Total Spend** card: a donut chart with the total in the centre and a ranked legend. Switch between **Cost**, **Rate** (per million tokens), and **Tokens**, and between **Today**, **Yesterday**, and **30 Days**. The info icon explains the numbers, and the share icon copies a screenshot of the card.
+- **Provider sections** show the plan next to the provider name. Each limit has a bar with an even-pace tick and a live reset countdown, plus a pace note:
+  - green while you're on course to finish the window with room to spare
+  - amber when the projection lands in the last 10%
+  - red, with a flame icon and a projected run-out time, when you'll hit the limit before it resets
+- **Spend rows** under Claude, Codex, and Cursor show Today, Yesterday, and Last 30 Days, along with a 30-day usage trend chart.
+- **Footer**: the version, a "Next update in…" countdown, and an **Options** menu with Customize, Settings, Share Screenshot, Refresh All, Check for Updates, Report an Issue, About, and Quit.
+
+The tray icon draws your two starred (or most-used) limits as mini bars, or shows the Throttle logo.
+
+### Alerts
+
+Desktop notifications warn you when a limit will run out before it resets, when you're almost out (10% or less left), or when it's cutting close. Each alert fires once per reset window, only when the state changes. Each alert type can be turned on or off in **Settings → Alerts**.
+
+### Local API
+
+While Throttle is running, it serves a read-only JSON API on `http://127.0.0.1:6736`:
+
+- `/v1/limits` and `/v1/limits/<provider>`
+- `/v1/usage` and `/v1/usage/<provider>`
+
+It only accepts loopback `Host` headers and sends no CORS headers, so web pages can't read it. You can turn it off in **Settings → General**.
 
 Throttle uses the official local `codex app-server` protocol and its `account/rateLimits/read` method. It does **not** scrape ChatGPT, copy browser cookies, or ask for an API key.
 
@@ -77,10 +115,18 @@ development and sideloading.
 - **Left-click the tray icon** or press the global shortcut to toggle the popup; it closes when it loses focus or on **Esc**
 - **Click a value** (`52% left`) to flip between used and left everywhere, and **click a reset time** to flip between a countdown and a clock time; hovering previews the other reading
 - **Hover a bar** for the pace projection at reset
-- **Right-click a card** to refresh that provider, star a metric for the tray icon, hide a metric or provider, or jump to its Customize page
-- **Expand a card** with its caret for extra metrics, last-updated time, errors, and quick links to the provider's usage and status pages
-- **Customize** turns providers on or off, drags them into any order, and stars or hides individual metrics
-- **Settings** covers theme (System, Dark, Light), the tray icon style, used/left and countdown/clock defaults, 12/24-hour time, always-on pacing, launch at login, the global shortcut, refresh interval, iPhone pairing, and updates
+- **Right-click a card** to refresh that provider, star a metric for the taskbar, move or hide a metric, hide the provider, copy a screenshot, or jump to its Customize page
+- **Expand a card** with its caret ("N more") for on-demand metrics, last-updated time, errors, and quick links to the provider's usage and status pages
+- **Customize** turns providers on or off and drags them into any order. Each provider's page splits metrics into **Always visible** and **On demand**, stars up to two for the taskbar, and hides the rest. **Ctrl + Z** undoes layout changes.
+- **Settings** covers:
+  - appearance: theme (System, Dark, Light), compact density, reduced animations, transparency
+  - taskbar: the strip style and the tray icon style
+  - usage: used/left and countdown/clock defaults, 12/24-hour time, always-on pacing, the Total Spend card
+  - alerts
+  - general: launch at login, the global shortcut, refresh interval, hiding from screen sharing, the local API
+  - iPhone pairing
+  - resetting all settings
+- A **welcome screen** on first launch turns on the providers already signed in on this PC
 - **Ctrl + R** refreshes everything, **Ctrl + ,** opens Settings
 - The footer shows a live "Next update in…" countdown; click it to refresh now
 - Last known values are cached on disk and shown instantly at launch. A failed refresh keeps them on screen with a warning badge instead of wiping the card.
@@ -101,7 +147,8 @@ Settings and the usage cache are stored locally in Electron's application data f
 - The iOS app and widget store only that scoped pairing token, never the
   Codex, Claude, or ChatGPT authentication session.
 - Electron renderer isolation is enabled and Node integration is disabled.
-- No analytics are included. Extra network calls are Claude's usage API and Cursor's usage API, and only for services enabled in settings.
+- No analytics are included. Throttle only calls each enabled provider's own usage API, and it fetches the LiteLLM price list from GitHub once a day.
+- **Hide from screen sharing** hides only the popup from screen capture; the taskbar strip stays visible.
 
 ## Development
 
@@ -112,7 +159,7 @@ npm run pack   # unpacked Windows app
 npm run dist   # portable + NSIS builds
 ```
 
-`npx electron . --screenshot=out.png --view=settings` renders the popup (`dashboard`, `customize`, or `settings`) to a PNG and quits, which is handy for checking UI changes.
+`npx electron . --screenshot=out.png --view=settings` renders the popup (`dashboard`, `customize`, `settings`, `about`, or `welcome`) to a PNG and quits (add `--screenshot-delay=8000` if it comes out blank), which is handy for checking UI changes.
 
 Test coverage includes pace projection, reset and value formatting, popup placement for every taskbar edge, malformed/missing payloads, settings boundaries, provider credentials, and JSONL protocol framing.
 

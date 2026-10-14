@@ -9,31 +9,57 @@
 </head>
 <body>
   <div class="app" id="app" data-view="dashboard">
-    <header class="topbar" id="topbar">
-      <button class="icon-btn back-btn" id="btn-back" type="button" aria-label="Back" title="Back (Esc)">
-        <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
-      </button>
-      <div class="brand" id="brand">
-        <img src="../assets/throttle.png" alt="">
-        <span>Throttle</span>
-      </div>
-      <h1 class="view-title" id="view-title"></h1>
-      <div class="topbar-actions" id="topbar-actions">
-        <button class="icon-btn" id="btn-refresh" type="button" aria-label="Refresh all" title="Refresh all (Ctrl+R)">
-          <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg>
-        </button>
-        <button class="icon-btn" id="btn-customize" type="button" aria-label="Customize" title="Customize">
-          <svg viewBox="0 0 24 24"><path d="M4 7h10"/><path d="M18 7h2"/><circle cx="16" cy="7" r="2"/><path d="M4 17h2"/><path d="M10 17h10"/><circle cx="8" cy="17" r="2"/></svg>
-        </button>
-        <button class="icon-btn" id="btn-settings" type="button" aria-label="Settings" title="Settings (Ctrl+,)">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-        </button>
-      </div>
-    </header>
-
     <div class="viewport" id="viewport">
-      <section class="view" id="view-dashboard" data-depth="0">
+      <section class="view" id="view-welcome">
         <div class="view-inner">
+          <div class="welcome-hero">
+            <img src="../assets/throttle.png" alt="">
+            <h1>Welcome to Throttle</h1>
+            <p>Your AI usage limits, live on the taskbar. Throttle reuses the logins already on this PC and only talks to each provider’s own servers.</p>
+          </div>
+          <p class="group-label">Providers found on this PC</p>
+          <div class="list" id="welcome-list"></div>
+          <p class="section-hint subtle">Usage appears next to the clock on your taskbar. Click it any time to open this window.</p>
+          <button class="btn btn-primary btn-block" id="welcome-done" type="button">Get started</button>
+        </div>
+      </section>
+
+      <section class="view" id="view-dashboard">
+        <div class="view-inner">
+          <section class="spend-card" id="spend-card" hidden>
+            <header class="spend-head">
+              <button class="pulldown" id="spend-metric" type="button" aria-haspopup="menu">
+                <span id="spend-metric-label">Cost</span>
+                <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <span class="spend-head-actions">
+                <button class="icon-btn sm" id="spend-info" type="button" aria-label="About spend">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>
+                </button>
+                <button class="icon-btn sm" id="spend-share" type="button" aria-label="Copy spend screenshot" data-tip="Copy screenshot">
+                  <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+                </button>
+              </span>
+            </header>
+            <div class="seg seg-wide" data-setting="spendPeriod">
+              <button type="button" data-value="today">Today</button>
+              <button type="button" data-value="yesterday">Yesterday</button>
+              <button type="button" data-value="last30">30 Days</button>
+            </div>
+            <div class="spend-body">
+              <div class="donut-wrap">
+                <svg class="donut" id="donut" viewBox="0 0 120 120" aria-hidden="true">
+                  <circle class="donut-track" cx="60" cy="60" r="46"/>
+                  <g id="donut-slices" transform="rotate(-90 60 60)"></g>
+                </svg>
+                <div class="donut-center">
+                  <strong id="donut-value">$0</strong>
+                  <span id="donut-unit">dollars</span>
+                </div>
+              </div>
+              <ol class="legend" id="spend-legend"></ol>
+            </div>
+          </section>
           <div class="cards" id="cards"></div>
           <div class="empty" id="empty" hidden>
             <div class="empty-mark">
@@ -46,29 +72,37 @@
         </div>
       </section>
 
-      <section class="view" id="view-customize" data-depth="1">
+      <section class="view" id="view-customize">
         <div class="view-inner">
-          <p class="section-hint">Turn providers on or off and drag to reorder them.</p>
+          <header class="view-head"><button class="icon-btn back-btn" type="button" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button><h1>Customize</h1></header>
+          <p class="section-hint">Turn providers on or off and drag to reorder. Open one to choose its metrics.</p>
           <div class="list" id="customize-list"></div>
-          <p class="section-hint subtle">Star up to two metrics inside a provider to show them in the tray icon.</p>
+          <p class="section-hint subtle">Ctrl+Z undoes layout changes.</p>
         </div>
       </section>
 
-      <section class="view" id="view-provider" data-depth="2">
+      <section class="view" id="view-provider">
         <div class="view-inner">
+          <header class="view-head"><button class="icon-btn back-btn" type="button" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button><h1 id="provider-title"></h1></header>
           <div class="provider-hero" id="provider-hero"></div>
-          <p class="group-label">Metrics</p>
-          <div class="list" id="provider-metrics"></div>
+          <div class="list compact-list" id="provider-taskbar"></div>
+          <p class="group-label">Always visible</p>
+          <div class="list" id="provider-always"></div>
+          <p class="group-label">On demand <span class="label-note">shown when expanded</span></p>
+          <div class="list" id="provider-demand"></div>
           <p class="section-hint subtle" id="provider-metrics-empty" hidden>Metrics appear after the first successful refresh.</p>
+          <p class="section-hint subtle">Star up to two meters to show on the taskbar. With none starred, the first two are used.</p>
           <div class="provider-actions">
             <button class="btn" id="provider-connect" type="button">Sign in again</button>
-            <button class="btn btn-ghost" id="provider-reset" type="button">Reset metrics</button>
+            <button class="btn btn-ghost" id="provider-reset" type="button">Reset layout</button>
           </div>
         </div>
       </section>
 
-      <section class="view" id="view-settings" data-depth="1">
+      <section class="view" id="view-settings">
         <div class="view-inner">
+          <header class="view-head"><button class="icon-btn back-btn" type="button" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button><h1>Settings</h1></header>
+
           <p class="group-label">Appearance</p>
           <div class="group">
             <div class="field">
@@ -80,10 +114,43 @@
               </div>
             </div>
             <div class="field">
+              <span class="field-label">Density</span>
+              <div class="seg" data-setting="density">
+                <button type="button" data-value="default">Default</button>
+                <button type="button" data-value="compact">Compact</button>
+              </div>
+            </div>
+            <div class="field">
+              <span class="field-label">Reduce animations</span>
+              <button class="switch" type="button" role="switch" data-setting="reduceAnimations" aria-label="Reduce animations"></button>
+            </div>
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label">Increase transparency</span>
+                <span class="field-help">Let more of the desktop show through</span>
+              </span>
+              <button class="switch" type="button" role="switch" data-setting="transparency" aria-label="Increase transparency"></button>
+            </div>
+          </div>
+
+          <p class="group-label">Taskbar</p>
+          <div class="group">
+            <div class="field" id="taskbar-field">
+              <span class="field-copy">
+                <span class="field-label">Usage on taskbar</span>
+                <span class="field-help" id="taskbar-help">Starred meters, next to the clock</span>
+              </span>
+              <div class="seg" data-setting="taskbarStyle">
+                <button type="button" data-value="text">Text</button>
+                <button type="button" data-value="bars">Bars</button>
+                <button type="button" data-value="off">Off</button>
+              </div>
+            </div>
+            <div class="field">
               <span class="field-label">Tray icon</span>
               <div class="seg" data-setting="trayStyle">
-                <button type="button" data-value="meter">Usage meter</button>
                 <button type="button" data-value="logo">Logo</button>
+                <button type="button" data-value="meter">Usage meter</button>
               </div>
             </div>
           </div>
@@ -119,6 +186,38 @@
               </span>
               <button class="switch" type="button" role="switch" data-setting="alwaysShowPacing" aria-label="Always show pacing"></button>
             </div>
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label">Show total spend</span>
+                <span class="field-help">Spend chart at the top of the dashboard</span>
+              </span>
+              <button class="switch" type="button" role="switch" data-setting="showTotalSpend" aria-label="Show total spend"></button>
+            </div>
+          </div>
+
+          <p class="group-label">Alerts</p>
+          <div class="group">
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label">Almost out</span>
+                <span class="field-help">10% or less left</span>
+              </span>
+              <button class="switch" type="button" role="switch" data-setting="alertAlmostOut" aria-label="Almost out alerts"></button>
+            </div>
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label">Cutting it close</span>
+                <span class="field-help">On pace to finish near the limit</span>
+              </span>
+              <button class="switch" type="button" role="switch" data-setting="alertCuttingClose" aria-label="Cutting it close alerts"></button>
+            </div>
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label">Will run out</span>
+                <span class="field-help">On pace to hit the limit before it resets</span>
+              </span>
+              <button class="switch" type="button" role="switch" data-setting="alertWillRunOut" aria-label="Will run out alerts"></button>
+            </div>
           </div>
 
           <p class="group-label">General</p>
@@ -144,6 +243,20 @@
                 <option value="900">15 minutes</option>
               </select>
             </div>
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label">Hide from screen share</span>
+                <span class="field-help">Blank this window in recordings and calls</span>
+              </span>
+              <button class="switch" type="button" role="switch" data-setting="hideFromScreenShare" aria-label="Hide from screen share"></button>
+            </div>
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label">Local API</span>
+                <span class="field-help">Read-only JSON at 127.0.0.1:6736/v1/limits</span>
+              </span>
+              <button class="switch" type="button" role="switch" data-setting="localApi" aria-label="Local API"></button>
+            </div>
           </div>
 
           <p class="group-label">iPhone widget</p>
@@ -157,34 +270,66 @@
             </div>
           </div>
 
-          <p class="group-label">About</p>
+          <p class="group-label">Reset</p>
           <div class="group">
             <div class="field">
               <span class="field-copy">
-                <span class="field-label" id="about-version">Throttle</span>
-                <span class="field-help" id="update-status">Usage limits for your AI tools</span>
+                <span class="field-label">Reset all settings</span>
+                <span class="field-help" id="reset-help">Layout, appearance, alerts and shortcut</span>
               </span>
-              <button class="btn" type="button" id="check-update">Check for updates</button>
-            </div>
-            <div class="field">
-              <span class="field-label">Quit Throttle</span>
-              <button class="btn btn-danger" type="button" id="quit">Quit</button>
+              <button class="btn btn-danger" type="button" id="reset-all">Reset</button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-about">
+        <div class="view-inner">
+          <header class="view-head"><button class="icon-btn back-btn" type="button" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button><h1>About</h1></header>
+          <div class="about-hero">
+            <img src="../assets/throttle.png" alt="">
+            <strong id="about-version">Throttle</strong>
+            <span>Live usage limits and spend for Claude, Codex, Cursor and Antigravity.</span>
+          </div>
+          <div class="group">
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label">Updates</span>
+                <span class="field-help" id="update-status">Check GitHub for a newer release</span>
+              </span>
+              <button class="btn" type="button" id="check-update">Check</button>
+            </div>
+            <div class="field">
+              <span class="field-label">Source code</span>
+              <button class="btn" type="button" data-url="https://github.com/Parth-Jadhav-2004/Throttle">GitHub</button>
+            </div>
+            <div class="field">
+              <span class="field-label">Found a bug?</span>
+              <button class="btn" type="button" id="about-issue">Report an issue</button>
+            </div>
+          </div>
+          <p class="section-hint subtle center">Design inspired by OpenUsage.</p>
         </div>
       </section>
     </div>
 
     <footer class="footer" id="footer">
-      <button class="footer-refresh" id="next-update" type="button" title="Refresh now (Ctrl+R)">
-        <span class="spinner" aria-hidden="true"></span>
-        <span id="next-update-text">Updating…</span>
+      <div class="footer-left">
+        <span class="footer-brand" id="footer-brand">Throttle</span>
+        <button class="footer-refresh" id="next-update" type="button" title="Refresh now (Ctrl+R)">
+          <span class="spinner" aria-hidden="true"></span>
+          <span id="next-update-text">Updating…</span>
+        </button>
+      </div>
+      <button class="pulldown" id="options-btn" type="button" aria-haspopup="menu">
+        <span>Options</span>
+        <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
       </button>
-      <span class="footer-version" id="version"></span>
     </footer>
 
     <div class="menu" id="menu" role="menu" hidden></div>
     <div class="tip" id="tip" role="tooltip" hidden></div>
+    <div class="toast" id="toast" role="status" hidden></div>
   </div>
   <script src="usage-model.js"></script>
   <script src="renderer.js"></script>

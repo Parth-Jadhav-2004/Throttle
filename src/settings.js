@@ -18,8 +18,12 @@ const PROVIDERS = [
   { id: 'antigravity', setting: 'showAntigravity', label: 'Antigravity' }
 ];
 const PROVIDER_IDS = PROVIDERS.map(provider => provider.id);
-const MAX_STARRED = 2;
+const MAX_STARRED_PER_PROVIDER = 2;
 const DEFAULT_SHORTCUT = 'CommandOrControl+Alt+U';
+const LAYOUT_KEYS = [
+  'providerOrder', 'showClaude', 'showCodex', 'showCursor', 'showAntigravity',
+  'hiddenMetrics', 'starredMetrics', 'placements', 'taskbarHiddenProviders'
+];
 
 function sanitizeOrder(value) {
   const seen = new Set();
@@ -34,16 +38,32 @@ function sanitizeOrder(value) {
   return order;
 }
 
-function sanitizeMetricKeys(value, limit = Infinity) {
-  const keys = [];
-  for (const key of Array.isArray(value) ? value : []) {
-    if (typeof key !== 'string') continue;
-    const [provider, metric] = key.split(':');
-    if (!PROVIDER_IDS.includes(provider) || !metric || keys.includes(key)) continue;
-    keys.push(key);
-    if (keys.length >= limit) break;
+function isMetricKey(key) {
+  if (typeof key !== 'string') return false;
+  const [provider, metric, extra] = key.split(':');
+  return PROVIDER_IDS.includes(provider) && Boolean(metric) && extra === undefined && /^[\w.-]+$/.test(metric);
+}
+
+function sanitizeMetricKeys(value) {
+  return [...new Set((Array.isArray(value) ? value : []).filter(isMetricKey))];
+}
+
+function sanitizeStarred(value) {
+  const counts = {};
+  return sanitizeMetricKeys(value).filter(key => {
+    const provider = key.split(':')[0];
+    counts[provider] = (counts[provider] || 0) + 1;
+    return counts[provider] <= MAX_STARRED_PER_PROVIDER;
+  });
+}
+
+function sanitizePlacements(value) {
+  const out = {};
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
+  for (const [key, placement] of Object.entries(value)) {
+    if (isMetricKey(key) && (placement === 'always' || placement === 'demand')) out[key] = placement;
   }
-  return keys;
+  return out;
 }
 
 function sanitizeProviderIds(value) {
@@ -65,16 +85,32 @@ function sanitizeSettings(value = {}) {
     showAntigravity: bool(value.showAntigravity, true),
     providerOrder: sanitizeOrder(value.providerOrder),
     theme: oneOf(value.theme, ['system', 'dark', 'light'], 'system'),
+    density: oneOf(value.density, ['default', 'compact'], 'default'),
+    reduceAnimations: bool(value.reduceAnimations, false),
+    transparency: bool(value.transparency, false),
     valueMode: oneOf(value.valueMode, ['left', 'used'], 'left'),
     resetMode: oneOf(value.resetMode, ['relative', 'absolute'], 'relative'),
     clock: oneOf(value.clock, ['system', '12h', '24h'], 'system'),
     alwaysShowPacing: bool(value.alwaysShowPacing, false),
-    trayStyle: oneOf(value.trayStyle, ['meter', 'logo'], 'meter'),
+    trayStyle: oneOf(value.trayStyle, ['meter', 'logo'], 'logo'),
+    taskbarStyle: oneOf(value.taskbarStyle, ['text', 'bars', 'off'], 'text'),
+    taskbarHiddenProviders: sanitizeProviderIds(value.taskbarHiddenProviders),
+    showTotalSpend: bool(value.showTotalSpend, true),
+    spendMetric: oneOf(value.spendMetric, ['cost', 'rate', 'tokens'], 'cost'),
+    spendPeriod: oneOf(value.spendPeriod, ['today', 'yesterday', 'last30'], 'last30'),
     hiddenMetrics: sanitizeMetricKeys(value.hiddenMetrics),
-    starredMetrics: sanitizeMetricKeys(value.starredMetrics, MAX_STARRED),
+    starredMetrics: sanitizeStarred(value.starredMetrics),
+    placements: sanitizePlacements(value.placements),
     expandedProviders: sanitizeProviderIds(value.expandedProviders),
+    alertAlmostOut: bool(value.alertAlmostOut, false),
+    alertCuttingClose: bool(value.alertCuttingClose, false),
+    alertWillRunOut: bool(value.alertWillRunOut, false),
+    hideFromScreenShare: bool(value.hideFromScreenShare, false),
+    localApi: bool(value.localApi, true),
     shortcut: sanitizeShortcut(value.shortcut),
-    launchAtLogin: bool(value.launchAtLogin, false)
+    launchAtLogin: bool(value.launchAtLogin, false),
+    welcomed: bool(value.welcomed, false),
+    welcomeCardDismissed: bool(value.welcomeCardDismissed, false)
   };
 }
 
@@ -90,8 +126,9 @@ function providerSettingKey(id) {
 module.exports = {
   PROVIDERS,
   PROVIDER_IDS,
-  MAX_STARRED,
+  MAX_STARRED_PER_PROVIDER,
   DEFAULT_SHORTCUT,
+  LAYOUT_KEYS,
   sanitizeSettings,
   visibleProviderIds,
   providerSettingKey

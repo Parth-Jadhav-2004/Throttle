@@ -10,10 +10,13 @@ const {
   nativeImage,
   nativeTheme,
   globalShortcut,
-  safeStorage
+  safeStorage,
+  Notification,
+  clipboard
 } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
+const os = require('node:os');
 const { spawn } = require('node:child_process');
 const QRCode = require('qrcode');
 const { CodexClient } = require('./codex-client');
@@ -35,6 +38,14 @@ const {
   enableTailscaleServe
 } = require('./mobile-access');
 const { POPUP_WIDTH, getPopupBounds } = require('./popup-position');
+const { TaskbarStrip } = require('./taskbar-strip');
+const { SpendService } = require('./spend-service');
+const { evaluateAlerts } = require('./alerts');
+const { startLocalApi } = require('./local-api');
+const { getCursorStateDbPath } = require('./cursor-auth');
+const { getClaudeCredentialsPath } = require('./claude-auth');
+
+const ISSUES_URL = 'https://github.com/Parth-Jadhav-2004/Throttle/issues/new';
 
 const FETCH_TIMEOUT_MS = 120 * 1000;
 const BLUR_REOPEN_GUARD_MS = 250;
@@ -66,6 +77,12 @@ let mobileServer;
 let mobileToken;
 let mobileEndpoint = null;
 let lastMobileSnapshot = null;
+let strip;
+let spendService;
+let localApi;
+let alertMemory = {};
+let popupAnchor = null;
+let firstLaunch = false;
 
 const providerStates = Object.fromEntries(PROVIDER_IDS.map(id => [id, null]));
 const refreshing = new Set();
@@ -76,10 +93,24 @@ function userFile(name) {
 
 function loadSettings() {
   try {
-    return sanitizeSettings(JSON.parse(fs.readFileSync(userFile('settings.json'), 'utf8')));
+    return sanitizeSettings({ welcomed: true, ...JSON.parse(fs.readFileSync(userFile('settings.json'), 'utf8')) });
   } catch {
-    return sanitizeSettings({});
+    firstLaunch = !fs.existsSync(userFile('settings.json'));
+    return sanitizeSettings({ welcomed: !firstLaunch });
   }
+}
+
+function detectProviders() {
+  const home = os.homedir();
+  const exists = file => {
+    try { return fs.existsSync(file); } catch { return false; }
+  };
+  return {
+    claude: exists(getClaudeCredentialsPath()) || exists(path.join(home, '.claude', 'projects')),
+    codex: exists(path.join(process.env.CODEX_HOME || path.join(home, '.codex'), 'auth.json')),
+    cursor: exists(getCursorStateDbPath()),
+    antigravity: exists(path.join(home, '.gemini', 'antigravity-cli'))
+  };
 }
 
 function saveSettings() {
@@ -246,8 +277,11 @@ function snapshot() {
   return {
     settings,
     providers,
+    spend: spendService?.snapshot() || {},
     nextRefreshAt,
     version: app.getVersion(),
+    stripSupported: Boolean(strip?.supported),
+    detected: settings.welcomed ? null : detectProviders(),
     taskbarDark: process.platform === 'win32'
       ? nativeTheme.shouldUseDarkColorsForSystemIntegratedUI
       : nativeTheme.shouldUseDarkColors
@@ -255,7 +289,9 @@ function snapshot() {
 }
 
 function sendSnapshot() {
-  if (popup && !popup.isDestroyed()) popup.webContents.send('usage-state', snapshot());
+  const state = snapshot();
+  if (popup && !popup.isDestroyed()) popup.webContents.send('usage-state', state);
+  strip?.update({ settings: state.settings, providers: state.providers, taskbarDark: state.taskbarDark });
 }
 
 function trayAnchor() {
@@ -265,7 +301,7 @@ function trayAnchor() {
 
 function positionPopup() {
   if (!popup || popup.isDestroyed()) return;
-  const anchor = trayAnchor();
+  const anchor = popupAnchor || trayAnchor();
   const point = anchor ? { x: anchor.x + anchor.width / 2, y: anchor.y + anchor.height / 2 } : screen.getCursorScreenPoint();
   const display = screen.getDisplayNearestPoint(point);
   const bounds = getPopupBounds({ display, anchor, height: popupHeight });
@@ -273,8 +309,9 @@ function positionPopup() {
   return bounds;
 }
 
-function showPopup(view) {
+function showPopup(view, anchor = null) {
   if (!popup || popup.isDestroyed()) return;
+  popupAnchor = anchor;
   const bounds = positionPopup();
   popup.webContents.send('popup-shown', { edge: bounds?.edge || 'bottom', view: view || null });
   popup.show();
@@ -288,13 +325,13 @@ function hidePopup() {
   popup.webContents.send('popup-hidden');
 }
 
-function togglePopup() {
+function togglePopup(anchor = null) {
   if (popup?.isVisible()) {
     hidePopup();
     return;
   }
   if (Date.now() - popupHiddenAt < BLUR_REOPEN_GUARD_MS) return;
-  showPopup();
+  showPopup(null, anchor);
 }
 
 function createPopup() {
@@ -324,6 +361,7 @@ function createPopup() {
     }
   });
   popup.setAlwaysOnTop(true, 'pop-up-menu');
+  popup.setContentProtection(settings.hideFromScreenShare);
   popup.on('blur', () => {
     if (!process.argv.some(arg => arg.startsWith('--screenshot='))) hidePopup();
   });
@@ -348,7 +386,7 @@ function createPopup() {
         fs.writeFileSync(screenshotArg.slice('--screenshot='.length), image.toPNG());
         isQuitting = true;
         app.quit();
-      }, 6000);
+      }, Number(process.argv.find(arg => arg.startsWith('--screenshot-delay='))?.split('=')[1]) || 6000);
     } else if (!process.argv.includes('--hidden')) {
       setTimeout(() => showPopup(), 300);
     }
@@ -362,7 +400,18 @@ function trayMenu() {
     { type: 'separator' },
     { label: 'Customize…', click: () => showPopup('customize') },
     { label: 'Settings…', click: () => showPopup('settings') },
+    {
+      label: 'Taskbar Display',
+      enabled: Boolean(strip?.supported),
+      submenu: [['text', 'Text'], ['bars', 'Bars'], ['off', 'Off']].map(([value, label]) => ({
+        label,
+        type: 'radio',
+        checked: settings.taskbarStyle === value,
+        click: () => updateSettings({ taskbarStyle: value })
+      }))
+    },
     { label: 'Check for Updates', click: () => void checkForUpdate().catch(() => {}) },
+    { label: 'Report an Issue…', click: () => void shell.openExternal(ISSUES_URL) },
     { type: 'separator' },
     { label: 'Quit Throttle', click: quit }
   ]);
@@ -371,7 +420,7 @@ function trayMenu() {
 function createTray() {
   tray = new Tray(path.join(__dirname, '..', 'assets', 'throttle.ico'));
   tray.setToolTip('Throttle');
-  tray.on('click', togglePopup);
+  tray.on('click', () => togglePopup());
   tray.on('right-click', () => tray.popUpContextMenu(trayMenu()));
 }
 
@@ -397,7 +446,68 @@ function isEnabled(id) {
 function setProviderData(id, data) {
   providerStates[id] = { status: 'connected', data, updatedAt: Date.now() };
   scheduleCacheWrite();
+  checkAlerts();
   sendSnapshot();
+}
+
+function checkAlerts() {
+  const result = evaluateAlerts({ providers: providerStates, settings, memory: alertMemory });
+  alertMemory = result.memory;
+  if (!Notification.isSupported()) return;
+  for (const alert of result.alerts) {
+    const notification = new Notification({
+      title: alert.title,
+      body: alert.body,
+      icon: path.join(__dirname, '..', 'assets', 'throttle.png'),
+      silent: false
+    });
+    notification.on('click', () => showPopup('dashboard'));
+    notification.show();
+  }
+}
+
+function applyStrip() {
+  strip?.setEnabled(settings.taskbarStyle !== 'off');
+}
+
+function applyLocalApi() {
+  if (settings.localApi && !localApi) {
+    localApi = startLocalApi(() => ({
+      visibleIds: visibleProviderIds(settings),
+      allIds: PROVIDER_IDS,
+      providers: providerStates,
+      spend: spendService?.snapshot() || {}
+    }));
+  } else if (!settings.localApi && localApi) {
+    localApi.close();
+    localApi = null;
+  }
+}
+
+async function copyScreenshot(rect) {
+  if (!popup || popup.isDestroyed()) return false;
+  const clip = rect && ['x', 'y', 'width', 'height'].every(key => Number.isFinite(rect[key]))
+    ? { x: Math.max(0, Math.floor(rect.x)), y: Math.max(0, Math.floor(rect.y)), width: Math.ceil(rect.width), height: Math.ceil(rect.height) }
+    : undefined;
+  const image = await popup.webContents.capturePage(clip);
+  if (image.isEmpty()) return false;
+  clipboard.writeImage(image);
+  return true;
+}
+
+function resetAllSettings() {
+  const keep = { welcomed: true };
+  settings = sanitizeSettings(keep);
+  saveSettings();
+  registerShortcut();
+  applyLoginItem();
+  nativeTheme.themeSource = settings.theme;
+  popup?.setContentProtection(settings.hideFromScreenShare);
+  applyStrip();
+  applyLocalApi();
+  schedulePolling();
+  void refreshAll();
+  return settings;
 }
 
 function setProviderError(id, error) {
@@ -509,9 +619,16 @@ function updateSettings(patch = {}) {
   if (settings.launchAtLogin !== previous.launchAtLogin) applyLoginItem();
   if (settings.theme !== previous.theme) nativeTheme.themeSource = settings.theme;
   if (settings.refreshSeconds !== previous.refreshSeconds) schedulePolling();
+  if (settings.taskbarStyle !== previous.taskbarStyle) applyStrip();
+  if (settings.localApi !== previous.localApi) applyLocalApi();
+  if (settings.hideFromScreenShare !== previous.hideFromScreenShare) popup?.setContentProtection(settings.hideFromScreenShare);
   for (const id of PROVIDER_IDS) {
     const key = providerSettingKey(id);
-    if (settings[key] && !previous[key]) void refreshProvider(id, { force: true });
+    if (settings[key] && !previous[key]) {
+      void refreshProvider(id, { force: true });
+      if (id === 'cursor') void spendService?.refreshCursor({ force: true });
+      else void spendService?.refreshLocal();
+    }
   }
   sendSnapshot();
   return { settings, shortcutOk };
@@ -624,7 +741,13 @@ ipcMain.on('popup-size', (_event, height) => {
   popupHeight = next;
   if (popup?.isVisible()) positionPopup();
 });
+ipcMain.handle('copy-screenshot', (_event, rect) => copyScreenshot(rect));
+ipcMain.handle('reset-settings', () => resetAllSettings());
+ipcMain.handle('report-issue', () => shell.openExternal(ISSUES_URL).then(() => true));
 ipcMain.on('tray-image', (_event, payload) => setTrayImage(payload));
+ipcMain.on('strip-width', (event, width) => {
+  if (strip?.isWindow(event.sender)) strip.setContentWidth(width);
+});
 ipcMain.on('hide-popup', hidePopup);
 ipcMain.on('quit', quit);
 
@@ -637,8 +760,27 @@ if (!app.requestSingleInstanceLock()) {
     settings = loadSettings();
     nativeTheme.themeSource = settings.theme;
     loadUsageCache();
+    spendService = new SpendService({
+      cacheDir: app.getPath('userData'),
+      getCursorEvents: options => (cursorClient ||= new CursorClient()).getUsageEvents(options),
+      isEnabled
+    });
+    spendService.on('update', sendSnapshot);
     createTray();
     createPopup();
+    const screenshotMode = process.argv.some(arg => arg.startsWith('--screenshot='));
+    if (!screenshotMode) {
+      strip = new TaskbarStrip({
+        preload: path.join(__dirname, 'strip-preload.js'),
+        file: path.join(__dirname, 'strip.html'),
+        onClick: (button, anchor) => (button === 'right'
+          ? tray?.popUpContextMenu(trayMenu(), screen.getCursorScreenPoint())
+          : togglePopup(anchor))
+      });
+      applyStrip();
+      applyLocalApi();
+    }
+    spendService.start();
     registerShortcut();
     if (app.isPackaged) applyLoginItem();
     startMobileServer().catch(error => {
@@ -659,6 +801,9 @@ app.on('before-quit', () => {
   writeUsageCache();
   globalShortcut.unregisterAll();
   codexClient?.stop();
+  spendService?.stop();
+  strip?.destroy();
+  localApi?.close();
   void mobileServer?.stop();
   mobileAccessWindow?.destroy();
   tray?.destroy();

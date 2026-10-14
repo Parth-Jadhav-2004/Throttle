@@ -26,6 +26,10 @@
       "assets/throttle.ico",
       "package.json"
     ],
+    "asarUnpack": [
+      "node_modules/koffi/**",
+      "src/taskbar-input-worker.js"
+    ],
     "win": {
       "icon": "assets/throttle.ico",
       "target": [
@@ -43,6 +47,7 @@
     }
   },
   "dependencies": {
+    "koffi": "^3.3.3",
     "qrcode": "^1.5.4"
   }
 }

@@ -115,12 +115,129 @@
     return [];
   }
 
+  const SPEND_PROVIDERS = ['claude', 'codex', 'cursor'];
+  const SPEND_ROWS = [
+    { id: 'today', label: 'Today', kind: 'spend', placement: 'demand' },
+    { id: 'yesterday', label: 'Yesterday', kind: 'spend', placement: 'demand' },
+    { id: 'last30', label: 'Last 30 Days', kind: 'spend', placement: 'demand' },
+    { id: 'trend', label: 'Usage Trend', kind: 'trend', placement: 'always' }
+  ];
+
   function metricCatalog(provider, data) {
     const known = STATIC_METRICS[provider] || [];
     const live = metricsForProvider(provider, data).map(({ id, label }) => ({ id, label }));
     const catalog = known.map(entry => live.find(item => item.id === entry.id) || entry);
     for (const item of live) if (!catalog.some(entry => entry.id === item.id)) catalog.push(item);
-    return catalog;
+    const quota = catalog.map(item => ({ ...item, kind: 'quota', placement: 'always' }));
+    return SPEND_PROVIDERS.includes(provider) ? [...quota, ...SPEND_ROWS.map(row => ({ ...row }))] : quota;
+  }
+
+  function placementFor(key, catalogEntry, settings = {}) {
+    return settings.placements?.[key] || catalogEntry?.placement || 'always';
+  }
+
+  function starredFor(provider, quotaMetrics, settings = {}) {
+    const hidden = new Set(settings.hiddenMetrics || []);
+    const visible = quotaMetrics.filter(m => !hidden.has(metricKey(provider, m.id)));
+    const keys = (settings.starredMetrics || []).filter(key => key.startsWith(`${provider}:`));
+    const starred = keys.map(key => visible.find(m => metricKey(provider, m.id) === key)).filter(Boolean);
+    return starred.length ? starred : visible.slice(0, 2);
+  }
+
+  function isStarred(provider, metricId, quotaMetrics, settings) {
+    return starredFor(provider, quotaMetrics, settings).some(m => m.id === metricId);
+  }
+
+  function visibleIds(settings = {}) {
+    return (settings.providerOrder || Object.keys(PROVIDER_META)).filter(id => {
+      const key = `show${id[0].toUpperCase()}${id.slice(1)}`;
+      return settings[key] !== false;
+    });
+  }
+
+  function stripEntries(providers = {}, settings = {}, nowSec = Date.now() / 1000) {
+    const hiddenProviders = new Set(settings.taskbarHiddenProviders || []);
+    const out = [];
+    for (const provider of visibleIds(settings)) {
+      if (hiddenProviders.has(provider)) continue;
+      const metrics = metricsForProvider(provider, providers[provider]?.data);
+      const starred = starredFor(provider, metrics, settings);
+      if (!starred.length) continue;
+      out.push({
+        provider,
+        metrics: starred.map(m => ({ key: metricKey(provider, m.id), metric: m, pace: computePace(m, nowSec) }))
+      });
+    }
+    return out;
+  }
+
+  function formatMoney(value) {
+    const n = Number(value) || 0;
+    if (n >= 1000) {
+      const k = n / 1000;
+      return `$${k >= 100 ? Math.round(k) : k.toFixed(1).replace(/\.0$/, '')}K`;
+    }
+    if (n >= 100) return `$${Math.round(n)}`;
+    return `$${n.toFixed(2)}`;
+  }
+
+  function formatMoneyExact(value) {
+    return `$${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  function formatTokens(value) {
+    const n = Number(value) || 0;
+    if (n >= 1e9) return `${(n / 1e9).toFixed(n >= 1e10 ? 0 : 1).replace(/\.0$/, '')}B`;
+    if (n >= 1e6) return `${(n / 1e6).toFixed(n >= 1e8 ? 0 : 1).replace(/\.0$/, '')}M`;
+    if (n >= 1e3) return `${(n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '')}K`;
+    return String(Math.round(n));
+  }
+
+  function spendRate(period) {
+    return period && period.tokens ? period.cost / (period.tokens / 1e6) : 0;
+  }
+
+  function spendValue(period, metric = 'cost') {
+    if (!period) return 0;
+    if (metric === 'tokens') return period.tokens;
+    if (metric === 'rate') return spendRate(period);
+    return period.cost;
+  }
+
+  function formatSpendValue(value, metric = 'cost', exact = false) {
+    if (metric === 'tokens') return exact ? `${Math.round(value).toLocaleString()} tokens` : formatTokens(value);
+    if (metric === 'rate') return `$${(Number(value) || 0).toFixed(2)}${exact ? ' per million tokens' : ''}`;
+    return exact ? formatMoneyExact(value) : formatMoney(value);
+  }
+
+  function spendUnit(metric = 'cost') {
+    if (metric === 'tokens') return 'tokens';
+    if (metric === 'rate') return 'per MTok';
+    return 'dollars';
+  }
+
+  function formatSpendRow(period) {
+    if (!period) return 'No usage';
+    return `${formatMoney(period.cost)} · ${formatTokens(period.tokens)} tokens`;
+  }
+
+  function totalSpend(spend = {}, settings = {}, period = 'last30', metric = 'cost') {
+    const slices = [];
+    let cost = 0;
+    let tokens = 0;
+    for (const provider of visibleIds(settings)) {
+      const summary = spend[provider]?.summary;
+      if (!summary) continue;
+      const entry = summary[period];
+      if (!entry) continue;
+      cost += entry.cost;
+      tokens += entry.tokens;
+      slices.push({ provider, period: entry, value: spendValue(entry, metric) });
+    }
+    if (metric !== 'rate') slices.sort((a, b) => b.value - a.value);
+    else slices.sort((a, b) => b.period.cost - a.period.cost);
+    const total = { cost, tokens };
+    return { slices, total, value: spendValue(total, metric) };
   }
 
   function metricKey(provider, metricId) {
@@ -251,24 +368,11 @@
   }
 
   function trayMetrics(providers = {}, settings = {}, nowSec = Date.now() / 1000) {
-    const visible = (settings.providerOrder || Object.keys(PROVIDER_META)).filter(id => {
-      const key = `show${id[0].toUpperCase()}${id.slice(1)}`;
-      return settings[key] !== false;
-    });
-    const hidden = new Set(settings.hiddenMetrics || []);
-    const all = [];
-    for (const provider of visible) {
-      for (const m of metricsForProvider(provider, providers[provider]?.data)) {
-        const key = metricKey(provider, m.id);
-        if (hidden.has(key)) continue;
-        all.push({ key, provider, metric: m, pace: computePace(m, nowSec) });
-      }
-    }
-    const starred = (settings.starredMetrics || [])
-      .map(key => all.find(entry => entry.key === key))
-      .filter(Boolean);
-    if (starred.length) return starred;
-    return all.sort((a, b) => b.metric.usedPercent - a.metric.usedPercent).slice(0, 2);
+    const groups = stripEntries(providers, { ...settings, taskbarHiddenProviders: [] }, nowSec);
+    const all = groups.flatMap(group => group.metrics.map(entry => ({ ...entry, provider: group.provider })));
+    const starred = new Set(settings.starredMetrics || []);
+    const explicit = all.filter(entry => starred.has(entry.key));
+    return (explicit.length ? explicit : all.sort((a, b) => b.metric.usedPercent - a.metric.usedPercent)).slice(0, 2);
   }
 
   function trayTooltip(entries, mode = 'left') {
@@ -285,6 +389,20 @@
     metricsForProvider,
     metricCatalog,
     metricKey,
+    SPEND_PROVIDERS,
+    placementFor,
+    starredFor,
+    isStarred,
+    visibleIds,
+    stripEntries,
+    formatMoney,
+    formatMoneyExact,
+    formatTokens,
+    spendValue,
+    formatSpendValue,
+    spendUnit,
+    formatSpendRow,
+    totalSpend,
     computePace,
     formatValue,
     displayPercent,
