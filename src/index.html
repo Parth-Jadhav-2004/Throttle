@@ -3,80 +3,190 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
   <title>Throttle</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body data-dock-state="hidden">
-  <div class="dock-shell">
-    <div id="tooltip" class="usage-tooltip" hidden aria-hidden="true">
-      <div class="usage-tooltip-header">
-        <span class="usage-tooltip-icon" id="tooltip-icon" aria-hidden="true"></span>
-        <span id="tooltip-title">Usage</span>
+<body>
+  <div class="app" id="app" data-view="dashboard">
+    <header class="topbar" id="topbar">
+      <button class="icon-btn back-btn" id="btn-back" type="button" aria-label="Back" title="Back (Esc)">
+        <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="brand" id="brand">
+        <img src="../assets/throttle.png" alt="">
+        <span>Throttle</span>
       </div>
-      <div id="tooltip-rows"></div>
+      <h1 class="view-title" id="view-title"></h1>
+      <div class="topbar-actions" id="topbar-actions">
+        <button class="icon-btn" id="btn-refresh" type="button" aria-label="Refresh all" title="Refresh all (Ctrl+R)">
+          <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-customize" type="button" aria-label="Customize" title="Customize">
+          <svg viewBox="0 0 24 24"><path d="M4 7h10"/><path d="M18 7h2"/><circle cx="16" cy="7" r="2"/><path d="M4 17h2"/><path d="M10 17h10"/><circle cx="8" cy="17" r="2"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-settings" type="button" aria-label="Settings" title="Settings (Ctrl+,)">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="viewport" id="viewport">
+      <section class="view" id="view-dashboard" data-depth="0">
+        <div class="view-inner">
+          <div class="cards" id="cards"></div>
+          <div class="empty" id="empty" hidden>
+            <div class="empty-mark">
+              <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 12l5-5"/></svg>
+            </div>
+            <p class="empty-title">No providers on</p>
+            <p class="empty-copy">Pick the AI tools you want Throttle to watch.</p>
+            <button class="btn btn-primary" id="empty-customize" type="button">Choose providers</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-customize" data-depth="1">
+        <div class="view-inner">
+          <p class="section-hint">Turn providers on or off and drag to reorder them.</p>
+          <div class="list" id="customize-list"></div>
+          <p class="section-hint subtle">Star up to two metrics inside a provider to show them in the tray icon.</p>
+        </div>
+      </section>
+
+      <section class="view" id="view-provider" data-depth="2">
+        <div class="view-inner">
+          <div class="provider-hero" id="provider-hero"></div>
+          <p class="group-label">Metrics</p>
+          <div class="list" id="provider-metrics"></div>
+          <p class="section-hint subtle" id="provider-metrics-empty" hidden>Metrics appear after the first successful refresh.</p>
+          <div class="provider-actions">
+            <button class="btn" id="provider-connect" type="button">Sign in again</button>
+            <button class="btn btn-ghost" id="provider-reset" type="button">Reset metrics</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-settings" data-depth="1">
+        <div class="view-inner">
+          <p class="group-label">Appearance</p>
+          <div class="group">
+            <div class="field">
+              <span class="field-label">Theme</span>
+              <div class="seg" data-setting="theme">
+                <button type="button" data-value="system">System</button>
+                <button type="button" data-value="dark">Dark</button>
+                <button type="button" data-value="light">Light</button>
+              </div>
+            </div>
+            <div class="field">
+              <span class="field-label">Tray icon</span>
+              <div class="seg" data-setting="trayStyle">
+                <button type="button" data-value="meter">Usage meter</button>
+                <button type="button" data-value="logo">Logo</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="group-label">Usage</p>
+          <div class="group">
+            <div class="field">
+              <span class="field-label">Show values as</span>
+              <div class="seg" data-setting="valueMode">
+                <button type="button" data-value="left">Left</button>
+                <button type="button" data-value="used">Used</button>
+              </div>
+            </div>
+            <div class="field">
+              <span class="field-label">Reset times</span>
+              <div class="seg" data-setting="resetMode">
+                <button type="button" data-value="relative">Countdown</button>
+                <button type="button" data-value="absolute">Clock</button>
+              </div>
+            </div>
+            <div class="field">
+              <span class="field-label">Clock format</span>
+              <div class="seg" data-setting="clock">
+                <button type="button" data-value="system">System</button>
+                <button type="button" data-value="12h">12-hour</button>
+                <button type="button" data-value="24h">24-hour</button>
+              </div>
+            </div>
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label">Always show pacing</span>
+                <span class="field-help">Even-pace tick and projection on every bar</span>
+              </span>
+              <button class="switch" type="button" role="switch" data-setting="alwaysShowPacing" aria-label="Always show pacing"></button>
+            </div>
+          </div>
+
+          <p class="group-label">General</p>
+          <div class="group">
+            <div class="field">
+              <span class="field-label">Launch at login</span>
+              <button class="switch" type="button" role="switch" data-setting="launchAtLogin" aria-label="Launch at login"></button>
+            </div>
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label">Global shortcut</span>
+                <span class="field-help" id="shortcut-help">Toggle Throttle from anywhere</span>
+              </span>
+              <button class="kbd-btn" type="button" id="shortcut"></button>
+            </div>
+            <div class="field">
+              <span class="field-label">Refresh every</span>
+              <select class="select" id="refresh-seconds">
+                <option value="30">30 seconds</option>
+                <option value="60">1 minute</option>
+                <option value="120">2 minutes</option>
+                <option value="300">5 minutes</option>
+                <option value="900">15 minutes</option>
+              </select>
+            </div>
+          </div>
+
+          <p class="group-label">iPhone widget</p>
+          <div class="group">
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label">Pair over Tailscale</span>
+                <span class="field-help">Show Codex limits on your iPhone</span>
+              </span>
+              <button class="btn" type="button" id="mobile-pairing">Pair</button>
+            </div>
+          </div>
+
+          <p class="group-label">About</p>
+          <div class="group">
+            <div class="field">
+              <span class="field-copy">
+                <span class="field-label" id="about-version">Throttle</span>
+                <span class="field-help" id="update-status">Usage limits for your AI tools</span>
+              </span>
+              <button class="btn" type="button" id="check-update">Check for updates</button>
+            </div>
+            <div class="field">
+              <span class="field-label">Quit Throttle</span>
+              <button class="btn btn-danger" type="button" id="quit">Quit</button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
 
-    <aside id="dock" class="dock" aria-label="Throttle usage">
-      <svg class="dock-shape" viewBox="0 0 104 100" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M104 0C104 2 100 6 88 8C62 12 16 6 10 18C4 30 4 70 10 82C16 94 62 88 88 92C100 94 104 98 104 100Z"></path>
-      </svg>
-      <button class="slot" id="slot-claude" type="button" data-provider="claude" aria-label="Claude usage">
-        <span class="ring">
-          <svg viewBox="0 0 64 64" aria-hidden="true">
-            <circle class="track" cx="32" cy="32" r="27"></circle>
-            <circle id="claude-ring" class="progress" cx="32" cy="32" r="27"></circle>
-          </svg>
-          <span class="logo" aria-hidden="true"><img src="assets/claude.svg" alt=""></span>
-        </span>
-        <span class="pct" id="claude-pct">—</span>
+    <footer class="footer" id="footer">
+      <button class="footer-refresh" id="next-update" type="button" title="Refresh now (Ctrl+R)">
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="next-update-text">Updating…</span>
       </button>
+      <span class="footer-version" id="version"></span>
+    </footer>
 
-      <button class="slot" id="slot-cursor" type="button" data-provider="cursor" aria-label="Cursor usage">
-        <span class="ring">
-          <svg viewBox="0 0 64 64" aria-hidden="true">
-            <circle class="track" cx="32" cy="32" r="27"></circle>
-            <circle id="cursor-ring" class="progress" cx="32" cy="32" r="27"></circle>
-          </svg>
-          <span class="logo cursor-logo" aria-hidden="true"><img src="assets/cursor.svg" alt=""></span>
-        </span>
-        <span class="pct" id="cursor-pct">—</span>
-      </button>
-
-      <button class="slot" id="slot-codex" type="button" data-provider="codex" aria-label="Codex usage">
-        <span class="ring">
-          <svg viewBox="0 0 64 64" aria-hidden="true">
-            <circle class="track" cx="32" cy="32" r="27"></circle>
-            <circle id="codex-ring" class="progress" cx="32" cy="32" r="27"></circle>
-          </svg>
-          <span class="logo" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.911 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.182a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.91 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.989 5.989 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zm-9.022 12.608a4.476 4.476 0 0 1-2.876-1.04l.142-.081 4.778-2.758a.795.795 0 0 0 .393-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.495 4.494zM3.599 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.758a.771.771 0 0 0 .781 0l5.843-3.368v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.141-1.646zM2.341 7.896a4.485 4.485 0 0 1 2.365-1.972V11.6a.766.766 0 0 0 .388.676l5.814 3.355-2.02 1.168a.076.076 0 0 1-.071 0L4.0 14.014A4.504 4.504 0 0 1 2.34 7.872zm16.596 3.855-5.833-3.387 2.015-1.164a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.104v-5.677a.79.79 0 0 0-.407-.667zm2.011-3.023-.142-.085-4.773-2.782a.776.776 0 0 0-.786 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061L14.268 4.05a4.5 4.5 0 0 1 6.68 4.66zM8.307 12.863l-2.02-1.164a.08.08 0 0 1-.038-.057V6.074a4.5 4.5 0 0 1 7.375-3.454l-.142.081L8.704 5.459a.795.795 0 0 0-.393.681zm1.097-2.365 2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"></path></svg>
-          </span>
-        </span>
-        <span class="pct" id="codex-pct">—</span>
-      </button>
-
-      <button class="slot" id="slot-antigravity" type="button" data-provider="antigravity" aria-label="Antigravity usage">
-        <span class="ring">
-          <svg viewBox="0 0 64 64" aria-hidden="true">
-            <circle class="track" cx="32" cy="32" r="27"></circle>
-            <circle id="antigravity-ring" class="progress" cx="32" cy="32" r="27"></circle>
-          </svg>
-          <span class="logo antigravity-logo" aria-hidden="true">
-            <img src="assets/antigravity.png" alt="">
-          </span>
-        </span>
-        <span class="pct" id="antigravity-pct">—</span>
-      </button>
-    </aside>
-
-    <button class="settings-float" id="open-settings" type="button" aria-label="Open settings" title="Settings">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
-        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-      </svg>
-    </button>
+    <div class="menu" id="menu" role="menu" hidden></div>
+    <div class="tip" id="tip" role="tooltip" hidden></div>
   </div>
-  <script src="usage-tooltip.browser.js"></script>
+  <script src="usage-model.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

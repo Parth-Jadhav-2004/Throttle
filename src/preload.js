@@ -1,20 +1,22 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('widget', {
-  getSettings: () => ipcRenderer.invoke('get-settings'),
-  openSettings: () => ipcRenderer.invoke('open-settings'),
-  refresh: () => ipcRenderer.invoke('refresh-usage'),
-  setOpacity: value => ipcRenderer.invoke('set-opacity', value),
-  setRefreshSeconds: value => ipcRenderer.invoke('set-refresh-seconds', value),
-  setShowProvider: (id, enabled) => ipcRenderer.invoke('set-show-provider', id, enabled),
+  getState: () => ipcRenderer.invoke('get-state'),
+  updateSettings: patch => ipcRenderer.invoke('update-settings', patch),
+  refresh: provider => ipcRenderer.invoke('refresh', provider),
   connect: provider => ipcRenderer.invoke('open-login', provider),
+  openExternal: url => ipcRenderer.invoke('open-external', url),
   checkForUpdate: () => ipcRenderer.invoke('check-for-update'),
   openMobilePairing: () => ipcRenderer.invoke('open-mobile-pairing'),
   getMobileAccessStatus: () => ipcRenderer.invoke('get-mobile-access-status'),
   enableMobileAccess: () => ipcRenderer.invoke('enable-mobile-access'),
   getMobilePairing: () => ipcRenderer.invoke('get-mobile-pairing'),
+  suspendShortcut: suspended => ipcRenderer.invoke('suspend-shortcut', suspended),
+  reportSize: height => ipcRenderer.send('popup-size', height),
+  setTrayImage: payload => ipcRenderer.send('tray-image', payload),
+  hide: () => ipcRenderer.send('hide-popup'),
+  quit: () => ipcRenderer.send('quit'),
   onUsageState: callback => ipcRenderer.on('usage-state', (_event, state) => callback(state)),
-  onDockState: callback => ipcRenderer.on('dock-state', (_event, state) => callback(state)),
-  dockTransitionComplete: (finalState, generation) =>
-    ipcRenderer.send('dock-transition-complete', { finalState, generation })
+  onShown: callback => ipcRenderer.on('popup-shown', (_event, payload) => callback(payload)),
+  onHidden: callback => ipcRenderer.on('popup-hidden', () => callback())
 });

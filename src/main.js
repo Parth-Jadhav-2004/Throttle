@@ -7,6 +7,9 @@ const {
   net,
   Tray,
   Menu,
+  nativeImage,
+  nativeTheme,
+  globalShortcut,
   safeStorage
 } = require('electron');
 const path = require('node:path');
@@ -18,7 +21,12 @@ const { CursorClient } = require('./cursor-client');
 const { ClaudeClient } = require('./claude-client');
 const { AntigravityClient } = require('./antigravity-client');
 const { normalizeRateLimits, mergeRateLimitSnapshot } = require('./rate-limits');
-const { sanitizeSettings, visibleProviderIds } = require('./settings');
+const {
+  PROVIDER_IDS,
+  sanitizeSettings,
+  visibleProviderIds,
+  providerSettingKey
+} = require('./settings');
 const { isNewerVersion } = require('./version');
 const {
   DEFAULT_PORT,
@@ -26,70 +34,89 @@ const {
   createUsageServer,
   enableTailscaleServe
 } = require('./mobile-access');
-const {
-  DOCK_PANEL_WIDTH,
-  DOCK_WIDTH,
-  getDockHeight,
-  getDockBounds,
-  isHotspotHit,
-  normalizeActiveWindowBounds,
-  shouldHideForFullscreen
-} = require('./dock-helpers');
-const { DockTransitionTracker } = require('./dock-state');
+const { POPUP_WIDTH, getPopupBounds } = require('./popup-position');
 
-const CURSOR_POLL_MS = 50;
-const TRANSITION_FALLBACK_MS = 450;
-const FULLSCREEN_POLL_MS = 400;
+const FETCH_TIMEOUT_MS = 120 * 1000;
+const BLUR_REOPEN_GUARD_MS = 250;
+const CACHE_WRITE_DELAY_MS = 1000;
+const LOGIN_PATTERNS = {
+  codex: /unauthorized|login|not logged|not found|ENOENT/i,
+  cursor: /unauthorized|unauthenticated|login|not found|ENOENT/i,
+  claude: /unauthorized|unauthenticated|login|not found|ENOENT/i,
+  antigravity: /credential|logged in|login|unauthorized|not found|ENOENT/i
+};
 
-let window;
-let settingsWindow;
+let popup;
 let tray;
-let client;
+let codexClient;
 let cursorClient;
 let claudeClient;
 let antigravityClient;
 let pollTimer;
-let cursorTimer;
-let fullscreenTimer;
-let transitionFallback;
+let cacheTimer;
 let settings;
-let activeDisplayId = null;
-let hotspotWasActive = false;
-let activationPending = false;
 let isQuitting = false;
 let lastRateLimitSnapshot = null;
-let lastCodexState = null;
-let lastCursorState = null;
-let lastClaudeState = null;
-let lastAntigravityState = null;
-let getWindowsModulePromise;
+let popupHeight = 520;
+let popupHiddenAt = 0;
+let nextRefreshAt = null;
+let registeredShortcut = null;
 let mobileAccessWindow;
 let mobileServer;
 let mobileToken;
 let mobileEndpoint = null;
 let lastMobileSnapshot = null;
-let hiddenForFullscreen = false;
 
-const dock = new DockTransitionTracker();
+const providerStates = Object.fromEntries(PROVIDER_IDS.map(id => [id, null]));
+const refreshing = new Set();
 
-function settingsPath() {
-  return path.join(app.getPath('userData'), 'settings.json');
+function userFile(name) {
+  return path.join(app.getPath('userData'), name);
 }
 
 function loadSettings() {
   try {
-    return sanitizeSettings(JSON.parse(fs.readFileSync(settingsPath(), 'utf8')));
+    return sanitizeSettings(JSON.parse(fs.readFileSync(userFile('settings.json'), 'utf8')));
   } catch {
     return sanitizeSettings({});
   }
 }
 
 function saveSettings() {
-  fs.writeFileSync(settingsPath(), JSON.stringify(settings, null, 2));
+  fs.writeFileSync(userFile('settings.json'), JSON.stringify(settings, null, 2));
+}
+
+function loadUsageCache() {
+  try {
+    const cached = JSON.parse(fs.readFileSync(userFile('usage-cache.json'), 'utf8'));
+    for (const id of PROVIDER_IDS) {
+      const entry = cached?.[id];
+      if (entry?.data) providerStates[id] = { status: 'connected', data: entry.data, updatedAt: entry.updatedAt, cached: true };
+    }
+  } catch {}
+}
+
+function scheduleCacheWrite() {
+  clearTimeout(cacheTimer);
+  cacheTimer = setTimeout(writeUsageCache, CACHE_WRITE_DELAY_MS);
+}
+
+function writeUsageCache() {
+  clearTimeout(cacheTimer);
+  const entries = {};
+  for (const id of PROVIDER_IDS) {
+    const state = providerStates[id];
+    if (state?.data) entries[id] = { data: state.data, updatedAt: state.updatedAt };
+  }
+  try {
+    fs.writeFileSync(userFile('usage-cache.json'), JSON.stringify(entries));
+  } catch (error) {
+    console.warn('Throttle could not write the usage cache:', error.message);
+  }
 }
 
 function mobileAccessPath() {
-  return path.join(app.getPath('userData'), 'mobile-access.json');
+  return userFile('mobile-access.json');
 }
 
 function loadMobileAccess() {
@@ -182,6 +209,7 @@ async function getMobilePairing() {
 }
 
 function openMobilePairing() {
+  hidePopup();
   if (mobileAccessWindow && !mobileAccessWindow.isDestroyed()) {
     mobileAccessWindow.show();
     mobileAccessWindow.focus();
@@ -193,6 +221,7 @@ function openMobilePairing() {
     minWidth: 400,
     minHeight: 560,
     title: 'Throttle · iPhone Widget',
+    icon: path.join(__dirname, '..', 'assets', 'throttle.png'),
     backgroundColor: '#000000',
     autoHideMenuBar: true,
     webPreferences: {
@@ -209,459 +238,283 @@ function openMobilePairing() {
   return true;
 }
 
-function getDisplayById(id) {
-  return screen.getAllDisplays().find(display => display.id === id);
-}
-
-function dockDisplay() {
-  return getDisplayById(activeDisplayId) || screen.getPrimaryDisplay();
-}
-
-function enforceAlwaysOnTop() {
-  if (!window || window.isDestroyed()) return;
-  window.setAlwaysOnTop(true, 'pop-up-menu');
-}
-
-function applyDockBounds(display = dockDisplay()) {
-  if (!window || window.isDestroyed() || !display) return;
-  activeDisplayId = display.id;
-  const bounds = getDockBounds(display, visibleProviderIds(settings).length);
-  const [, currentHeight] = window.getSize();
-  if (bounds.height > currentHeight) {
-    window.setMaximumSize(bounds.width, bounds.height);
-    window.setMinimumSize(bounds.width, bounds.height);
-  } else {
-    window.setMinimumSize(bounds.width, bounds.height);
-    window.setMaximumSize(bounds.width, bounds.height);
-  }
-  window.setBounds(bounds, false);
-}
-
-function sendDockState(state, generation) {
-  if (!window || window.isDestroyed()) return;
-  window.webContents.send('dock-state', { state, generation });
-}
-
-function finalizeTransition(finalState, generation) {
-  if (!dock.complete(finalState, generation)) return false;
-  clearTimeout(transitionFallback);
-  transitionFallback = null;
-  if (finalState === 'hidden' && window && !window.isDestroyed()) {
-    window.setIgnoreMouseEvents(true);
-    window.blur();
-  }
-  return true;
-}
-
-function beginTransitionFallback(finalState, generation) {
-  clearTimeout(transitionFallback);
-  transitionFallback = setTimeout(
-    () => finalizeTransition(finalState, generation),
-    TRANSITION_FALLBACK_MS
-  );
-}
-
-function showDock(display = dockDisplay(), { bypassFullscreen = false } = {}) {
-  if (!window || window.isDestroyed() || !display) return;
-  if (hiddenForFullscreen && !bypassFullscreen) return;
-  clearTimeout(transitionFallback);
-  applyDockBounds(display);
-  window.setIgnoreMouseEvents(false);
-  window.showInactive();
-  enforceAlwaysOnTop();
-  const generation = dock.begin('showing');
-  sendDockState('showing', generation);
-  beginTransitionFallback('visible', generation);
-}
-
-function hideDock({ forFullscreen = false } = {}) {
-  if (!window || window.isDestroyed() || dock.state === 'hidden' || dock.state === 'hiding') return;
-  if (forFullscreen) hiddenForFullscreen = true;
-  const generation = dock.begin('hiding');
-  sendDockState('hiding', generation);
-  beginTransitionFallback('hidden', generation);
-}
-
-function pointInDockZone(point) {
-  if (!window || window.isDestroyed()) return false;
-  const bounds = window.getBounds();
-  const panelLeft = bounds.x + bounds.width - DOCK_PANEL_WIDTH;
-  return point.x >= panelLeft &&
-    point.x < bounds.x + bounds.width &&
-    point.y >= bounds.y &&
-    point.y < bounds.y + bounds.height;
-}
-
-function sendToWindows(channel, payload) {
-  if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
-  if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.webContents.send(channel, payload);
-}
-
 function snapshot() {
+  const providers = {};
+  for (const id of PROVIDER_IDS) {
+    providers[id] = providerStates[id] ? { ...providerStates[id], refreshing: refreshing.has(id) } : (refreshing.has(id) ? { refreshing: true } : null);
+  }
   return {
-    settings: {
-      opacity: settings.opacity,
-      refreshSeconds: settings.refreshSeconds,
-      showClaude: settings.showClaude,
-      showCursor: settings.showCursor,
-      showCodex: settings.showCodex,
-      showAntigravity: settings.showAntigravity
-    },
-    providers: {
-      claude: lastClaudeState,
-      cursor: lastCursorState,
-      codex: lastCodexState,
-      antigravity: lastAntigravityState
-    }
+    settings,
+    providers,
+    nextRefreshAt,
+    version: app.getVersion(),
+    taskbarDark: process.platform === 'win32'
+      ? nativeTheme.shouldUseDarkColorsForSystemIntegratedUI
+      : nativeTheme.shouldUseDarkColors
   };
 }
 
 function sendSnapshot() {
-  sendToWindows('usage-state', snapshot());
+  if (popup && !popup.isDestroyed()) popup.webContents.send('usage-state', snapshot());
 }
 
-async function getActiveWindow() {
-  getWindowsModulePromise ||= import('get-windows');
-  const { activeWindow } = await getWindowsModulePromise;
-  const result = await activeWindow();
-  if (process.platform !== 'win32') return result;
-  return normalizeActiveWindowBounds(
-    result,
-    bounds => screen.screenToDipRect(null, bounds)
-  );
+function trayAnchor() {
+  const bounds = tray?.getBounds();
+  return bounds && bounds.width ? bounds : null;
 }
 
-async function tryHotspotReveal(display) {
-  if (activationPending || hiddenForFullscreen || dock.state !== 'hidden') return;
-  activationPending = true;
-  const checkingGeneration = dock.begin('checking');
-  try {
-    const activeWindow = await getActiveWindow();
-    const point = screen.getCursorScreenPoint();
-    const currentDisplay = screen.getDisplayNearestPoint(point);
-    const stillInHotspot = currentDisplay.id === display.id &&
-      isHotspotHit(
-        point,
-        currentDisplay,
-        screen.getAllDisplays(),
-        getDockHeight(visibleProviderIds(settings).length)
-      );
-    const stillChecking = dock.state === 'checking' && dock.generation === checkingGeneration;
-    if (stillChecking && stillInHotspot &&
-      !shouldHideForFullscreen(activeWindow, currentDisplay)) {
-      showDock(currentDisplay);
-    } else if (stillChecking) {
-      dock.state = 'hidden';
-    }
-  } catch (error) {
-    console.warn('Throttle could not inspect the foreground window:', error);
-    if (dock.state === 'checking' && dock.generation === checkingGeneration) {
-      dock.state = 'hidden';
-    }
-  } finally {
-    activationPending = false;
-  }
-}
-
-function monitorCursor() {
-  if (!window || window.isDestroyed()) return;
-  const point = screen.getCursorScreenPoint();
-  const displays = screen.getAllDisplays();
+function positionPopup() {
+  if (!popup || popup.isDestroyed()) return;
+  const anchor = trayAnchor();
+  const point = anchor ? { x: anchor.x + anchor.width / 2, y: anchor.y + anchor.height / 2 } : screen.getCursorScreenPoint();
   const display = screen.getDisplayNearestPoint(point);
-  const inHotspot = isHotspotHit(
-    point,
-    display,
-    displays,
-    getDockHeight(visibleProviderIds(settings).length)
-  );
+  const bounds = getPopupBounds({ display, anchor, height: popupHeight });
+  popup.setBounds({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }, false);
+  return bounds;
+}
 
-  if (dock.state === 'hidden' && inHotspot && !hotspotWasActive) {
-    void tryHotspotReveal(display);
+function showPopup(view) {
+  if (!popup || popup.isDestroyed()) return;
+  const bounds = positionPopup();
+  popup.webContents.send('popup-shown', { edge: bounds?.edge || 'bottom', view: view || null });
+  popup.show();
+  popup.focus();
+}
+
+function hidePopup() {
+  if (!popup || popup.isDestroyed() || !popup.isVisible()) return;
+  popupHiddenAt = Date.now();
+  popup.hide();
+  popup.webContents.send('popup-hidden');
+}
+
+function togglePopup() {
+  if (popup?.isVisible()) {
+    hidePopup();
+    return;
   }
-
-  if (dock.state === 'showing' || dock.state === 'visible') {
-    if (!pointInDockZone(point)) hideDock();
-  } else if (dock.state === 'hiding' && pointInDockZone(point) && !hiddenForFullscreen) {
-    showDock(getDisplayById(activeDisplayId) || display);
-  }
-
-  hotspotWasActive = inHotspot;
+  if (Date.now() - popupHiddenAt < BLUR_REOPEN_GUARD_MS) return;
+  showPopup();
 }
 
-async function monitorFullscreen() {
-  if (!window || window.isDestroyed()) return;
-  const display = dockDisplay();
-  try {
-    const activeWindow = await getActiveWindow();
-    const hide = shouldHideForFullscreen(activeWindow, display);
-    if (hide) {
-      hiddenForFullscreen = true;
-      hideDock({ forFullscreen: true });
-    } else if (hiddenForFullscreen) {
-      hiddenForFullscreen = false;
-      hotspotWasActive = false;
-    }
-  } catch (error) {
-    console.warn('Throttle could not inspect the foreground window:', error);
-  }
-}
-
-function handleDisplayChange() {
-  if (!window || window.isDestroyed()) return;
-  const current = getDisplayById(activeDisplayId);
-  applyDockBounds(current || screen.getPrimaryDisplay());
-}
-
-function webPreferences() {
-  return {
-    preload: path.join(__dirname, 'preload.js'),
-    contextIsolation: true,
-    nodeIntegration: false,
-    sandbox: false
-  };
-}
-
-function createWindow() {
-  settings = loadSettings();
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const initialBounds = getDockBounds(primaryDisplay, visibleProviderIds(settings).length);
-  window = new BrowserWindow({
+function createPopup() {
+  popup = new BrowserWindow({
     title: 'Throttle',
     icon: path.join(__dirname, '..', 'assets', 'throttle.png'),
-    ...initialBounds,
-    minWidth: DOCK_WIDTH,
-    minHeight: initialBounds.height,
-    maxWidth: DOCK_WIDTH,
-    maxHeight: initialBounds.height,
+    width: POPUP_WIDTH,
+    height: popupHeight,
     frame: false,
-    transparent: true,
-    backgroundColor: '#00000000',
     resizable: false,
     movable: false,
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
-    alwaysOnTop: true,
-    hasShadow: false,
     skipTaskbar: true,
-    opacity: settings.opacity,
+    alwaysOnTop: true,
     show: false,
-    webPreferences: webPreferences()
+    roundedCorners: true,
+    backgroundColor: '#00000000',
+    backgroundMaterial: 'acrylic',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      backgroundThrottling: false
+    }
   });
-  activeDisplayId = primaryDisplay.id;
-  enforceAlwaysOnTop();
-  window.on('blur', enforceAlwaysOnTop);
-  window.on('show', enforceAlwaysOnTop);
-  window.on('restore', enforceAlwaysOnTop);
-  window.on('close', event => {
+  popup.setAlwaysOnTop(true, 'pop-up-menu');
+  popup.on('blur', () => {
+    if (!process.argv.some(arg => arg.startsWith('--screenshot='))) hidePopup();
+  });
+  popup.on('close', event => {
     if (isQuitting) return;
     event.preventDefault();
+    hidePopup();
   });
-  window.on('closed', () => {
-    window = null;
+  popup.on('closed', () => {
+    popup = null;
   });
-
-  window.loadFile(path.join(__dirname, 'index.html'));
-  window.once('ready-to-show', () => {
+  popup.loadFile(path.join(__dirname, 'index.html'));
+  popup.webContents.once('did-finish-load', () => {
+    sendSnapshot();
     const screenshotArg = process.argv.find(arg => arg.startsWith('--screenshot='));
-    const verifyArg = process.argv.find(arg => arg.startsWith('--verify-state='));
-    window.showInactive();
-    window.setIgnoreMouseEvents(true);
-    sendDockState('hidden', dock.generation);
-    if (screenshotArg || verifyArg) {
-      showDock(primaryDisplay, { bypassFullscreen: true });
-    }
-
-    if (verifyArg) {
-      const outputPath = verifyArg.slice('--verify-state='.length);
-      setTimeout(async () => {
-        if (!window || window.isDestroyed()) return;
-        let foregroundInspection = false;
-        let foregroundInspectionError = null;
-        try {
-          foregroundInspection = Boolean(await getActiveWindow());
-        } catch (error) {
-          foregroundInspectionError = String(error?.message || error);
-        }
-        fs.writeFileSync(outputPath, JSON.stringify({
-          alwaysOnTop: window.isAlwaysOnTop(),
-          movable: window.isMovable(),
-          resizable: window.isResizable(),
-          minimizable: window.isMinimizable(),
-          maximizable: window.isMaximizable(),
-          minimumSize: window.getMinimumSize(),
-          maximumSize: window.getMaximumSize(),
-          bounds: window.getBounds(),
-          dockState: dock.state,
-          foregroundInspection,
-          foregroundInspectionError
-        }, null, 2));
-        if (!screenshotArg) {
-          isQuitting = true;
-          app.quit();
-        }
-      }, 450);
-    }
-
     if (screenshotArg) {
-      const outputPath = screenshotArg.slice('--screenshot='.length);
+      const viewArg = process.argv.find(arg => arg.startsWith('--view='));
+      setTimeout(() => showPopup(viewArg ? viewArg.slice('--view='.length) : null), 300);
       setTimeout(async () => {
-        if (!window || window.isDestroyed()) return;
-        const image = await window.webContents.capturePage();
-        fs.writeFileSync(outputPath, image.toPNG());
+        if (!popup || popup.isDestroyed()) return;
+        const image = await popup.webContents.capturePage();
+        fs.writeFileSync(screenshotArg.slice('--screenshot='.length), image.toPNG());
         isQuitting = true;
         app.quit();
-      }, 4500);
+      }, 6000);
+    } else if (!process.argv.includes('--hidden')) {
+      setTimeout(() => showPopup(), 300);
     }
   });
 }
 
-function openSettings() {
-  if (settingsWindow && !settingsWindow.isDestroyed()) {
-    settingsWindow.show();
-    settingsWindow.focus();
-    return true;
-  }
-  settingsWindow = new BrowserWindow({
-    width: 440,
-    height: 640,
-    minWidth: 400,
-    minHeight: 600,
-    title: 'Throttle',
-    icon: path.join(__dirname, '..', 'assets', 'throttle.png'),
-    backgroundColor: '#000000',
-    autoHideMenuBar: true,
-    webPreferences: webPreferences()
-  });
-  settingsWindow.loadFile(path.join(__dirname, 'settings.html'));
-  settingsWindow.on('closed', () => {
-    settingsWindow = null;
-  });
-  return true;
+function trayMenu() {
+  return Menu.buildFromTemplate([
+    { label: 'Open Throttle', click: () => showPopup('dashboard') },
+    { label: 'Refresh Now', click: () => void refreshAll({ force: true }) },
+    { type: 'separator' },
+    { label: 'Customize…', click: () => showPopup('customize') },
+    { label: 'Settings…', click: () => showPopup('settings') },
+    { label: 'Check for Updates', click: () => void checkForUpdate().catch(() => {}) },
+    { type: 'separator' },
+    { label: 'Quit Throttle', click: quit }
+  ]);
 }
 
 function createTray() {
   tray = new Tray(path.join(__dirname, '..', 'assets', 'throttle.ico'));
-  updateTrayTooltip();
-  tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Settings', click: openSettings },
-    { type: 'separator' },
-    { label: 'Refresh Usage', click: () => void refreshUsage() },
-    { label: 'Check for Updates', click: () => void checkForUpdate().catch(() => {}) },
-    { type: 'separator' },
-    {
-      label: 'Quit',
-      click: () => {
-        isQuitting = true;
-        app.quit();
-      }
-    }
-  ]));
-  tray.on('click', openSettings);
+  tray.setToolTip('Throttle');
+  tray.on('click', togglePopup);
+  tray.on('right-click', () => tray.popUpContextMenu(trayMenu()));
 }
 
-function cacheProvider(provider, state) {
-  if (provider === 'cursor') lastCursorState = state;
-  else if (provider === 'claude') lastClaudeState = state;
-  else if (provider === 'antigravity') lastAntigravityState = state;
-  else lastCodexState = state;
+function setTrayImage({ images, tooltip } = {}) {
+  if (!tray) return;
+  if (typeof tooltip === 'string') tray.setToolTip(tooltip.slice(0, 127));
+  if (settings.trayStyle === 'logo' || !Array.isArray(images) || !images.length) {
+    tray.setImage(path.join(__dirname, '..', 'assets', 'throttle.ico'));
+    return;
+  }
+  const image = nativeImage.createEmpty();
+  for (const entry of images) {
+    if (typeof entry?.dataUrl !== 'string' || !entry.dataUrl.startsWith('data:image/png')) continue;
+    image.addRepresentation({ scaleFactor: Number(entry.scale) || 1, dataURL: entry.dataUrl });
+  }
+  if (!image.isEmpty()) tray.setImage(image);
+}
+
+function isEnabled(id) {
+  return Boolean(settings[providerSettingKey(id)]);
+}
+
+function setProviderData(id, data) {
+  providerStates[id] = { status: 'connected', data, updatedAt: Date.now() };
+  scheduleCacheWrite();
   sendSnapshot();
 }
 
-async function refreshCodexUsage() {
-  try {
-    if (!client) {
-      client = new CodexClient();
-      client.on('rate-limits', params => {
-        lastRateLimitSnapshot = mergeRateLimitSnapshot(lastRateLimitSnapshot || {}, params.rateLimits || {});
-        const data = normalizeRateLimits({ rateLimits: lastRateLimitSnapshot });
-        const updatedAt = Date.now();
-        updateMobileSnapshot(data, updatedAt);
-        cacheProvider('codex', { status: 'connected', data, updatedAt });
-      });
-    }
-    const raw = await client.getRateLimits();
-    lastRateLimitSnapshot = raw?.rateLimitsByLimitId?.codex || raw?.rateLimits || null;
-    const data = normalizeRateLimits(raw);
-    const updatedAt = Date.now();
-    updateMobileSnapshot(data, updatedAt);
-    cacheProvider('codex', { status: 'connected', data, updatedAt });
-  } catch (error) {
-    const message = String(error?.message || error);
-    const needsLogin = /unauthorized|login|not logged|not found|ENOENT/i.test(message);
-    cacheProvider('codex', {
-      status: needsLogin ? 'disconnected' : 'error',
-      error: message,
-      updatedAt: Date.now()
-    });
-  }
+function setProviderError(id, error) {
+  const message = String(error?.message || error);
+  const status = LOGIN_PATTERNS[id].test(message) ? 'disconnected' : 'error';
+  const previous = providerStates[id];
+  providerStates[id] = previous?.data
+    ? { ...previous, status: 'connected', error: message, errorStatus: status }
+    : { status, error: message, updatedAt: Date.now() };
+  sendSnapshot();
 }
 
-async function refreshCursorUsage() {
-  try {
-    cursorClient ||= new CursorClient();
-    const data = await cursorClient.getUsage();
-    cacheProvider('cursor', { status: 'connected', data, updatedAt: Date.now() });
-  } catch (error) {
-    const message = String(error?.message || error);
-    const needsLogin = /unauthorized|unauthenticated|login|not found|ENOENT/i.test(message);
-    cacheProvider('cursor', {
-      status: needsLogin ? 'disconnected' : 'error',
-      error: message,
-      updatedAt: Date.now()
-    });
-  }
+function withTimeout(promise, ms) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Refresh timed out after ${Math.round(ms / 1000)}s`)), ms);
+    })
+  ]).finally(() => clearTimeout(timer));
 }
 
-async function refreshClaudeUsage() {
-  try {
-    claudeClient ||= new ClaudeClient();
-    const data = await claudeClient.getUsage();
-    cacheProvider('claude', { status: 'connected', data, updatedAt: Date.now() });
-  } catch (error) {
-    const message = String(error?.message || error);
-    const needsLogin = /unauthorized|unauthenticated|login|not found|ENOENT/i.test(message);
-    cacheProvider('claude', {
-      status: needsLogin ? 'disconnected' : 'error',
-      error: message,
-      updatedAt: Date.now()
+async function fetchCodex() {
+  if (!codexClient) {
+    codexClient = new CodexClient();
+    codexClient.on('rate-limits', params => {
+      lastRateLimitSnapshot = mergeRateLimitSnapshot(lastRateLimitSnapshot || {}, params.rateLimits || {});
+      const data = normalizeRateLimits({ rateLimits: lastRateLimitSnapshot });
+      updateMobileSnapshot(data);
+      setProviderData('codex', data);
     });
   }
+  const raw = await codexClient.getRateLimits();
+  lastRateLimitSnapshot = raw?.rateLimitsByLimitId?.codex || raw?.rateLimits || null;
+  const data = normalizeRateLimits(raw);
+  updateMobileSnapshot(data);
+  return data;
 }
 
-async function refreshAntigravityUsage() {
-  try {
+const FETCHERS = {
+  codex: fetchCodex,
+  cursor: () => (cursorClient ||= new CursorClient()).getUsage(),
+  claude: () => (claudeClient ||= new ClaudeClient()).getUsage(),
+  antigravity: ({ force }) => {
     antigravityClient ||= new AntigravityClient();
-    const data = await antigravityClient.getUsage();
-    cacheProvider('antigravity', { status: 'connected', data, updatedAt: Date.now() });
+    if (force) antigravityClient.cached = null;
+    return antigravityClient.getUsage();
+  }
+};
+
+async function refreshProvider(id, { force = false } = {}) {
+  if (!isEnabled(id) || refreshing.has(id)) return;
+  refreshing.add(id);
+  sendSnapshot();
+  try {
+    setProviderData(id, await withTimeout(FETCHERS[id]({ force }), FETCH_TIMEOUT_MS));
   } catch (error) {
-    const message = String(error?.message || error);
-    const needsLogin = /credential|logged in|login|unauthorized|not found|ENOENT/i.test(message);
-    cacheProvider('antigravity', {
-      status: needsLogin ? 'disconnected' : 'error',
-      error: message,
-      updatedAt: Date.now()
-    });
+    setProviderError(id, error);
+  } finally {
+    refreshing.delete(id);
+    sendSnapshot();
   }
 }
 
-async function refreshUsage() {
-  const jobs = [];
-  if (settings.showCodex) jobs.push(refreshCodexUsage());
-  else lastCodexState = null;
-  if (settings.showCursor) jobs.push(refreshCursorUsage());
-  else lastCursorState = null;
-  if (settings.showClaude) jobs.push(refreshClaudeUsage());
-  else lastClaudeState = null;
-  if (settings.showAntigravity) jobs.push(refreshAntigravityUsage());
-  else lastAntigravityState = null;
-  sendSnapshot();
-  await Promise.all(jobs);
+async function refreshAll({ force = false } = {}) {
+  schedulePolling();
+  await Promise.all(visibleProviderIds(settings).map(id => refreshProvider(id, { force })));
 }
 
-function updateTrayTooltip() {
-  const names = visibleProviderIds(settings).map(id => id[0].toUpperCase() + id.slice(1));
-  tray?.setToolTip(names.length ? `Throttle · ${names.join(', ')}` : 'Throttle');
+function schedulePolling() {
+  clearInterval(pollTimer);
+  const intervalMs = settings.refreshSeconds * 1000;
+  nextRefreshAt = Date.now() + intervalMs;
+  pollTimer = setInterval(() => {
+    nextRefreshAt = Date.now() + intervalMs;
+    void Promise.all(visibleProviderIds(settings).map(id => refreshProvider(id)));
+  }, intervalMs);
+  sendSnapshot();
+}
+
+function registerShortcut() {
+  if (registeredShortcut) {
+    globalShortcut.unregister(registeredShortcut);
+    registeredShortcut = null;
+  }
+  if (!settings.shortcut) return true;
+  try {
+    if (globalShortcut.register(settings.shortcut, togglePopup)) {
+      registeredShortcut = settings.shortcut;
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+function applyLoginItem() {
+  if (process.platform !== 'win32') return;
+  const exe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+  const args = app.isPackaged ? ['--hidden'] : [app.getAppPath(), '--hidden'];
+  app.setLoginItemSettings({ openAtLogin: settings.launchAtLogin, path: exe, args });
+}
+
+function updateSettings(patch = {}) {
+  const previous = settings;
+  settings = sanitizeSettings({ ...settings, ...patch });
+  saveSettings();
+  let shortcutOk = true;
+  if (settings.shortcut !== previous.shortcut) shortcutOk = registerShortcut();
+  if (settings.launchAtLogin !== previous.launchAtLogin) applyLoginItem();
+  if (settings.theme !== previous.theme) nativeTheme.themeSource = settings.theme;
+  if (settings.refreshSeconds !== previous.refreshSeconds) schedulePolling();
+  for (const id of PROVIDER_IDS) {
+    const key = providerSettingKey(id);
+    if (settings[key] && !previous[key]) void refreshProvider(id, { force: true });
+  }
+  sendSnapshot();
+  return { settings, shortcutOk };
 }
 
 function openCursor() {
@@ -703,15 +556,18 @@ function openCliLogin(title, command) {
 }
 
 function openLogin(provider) {
+  hidePopup();
   if (provider === 'cursor') return openCursor();
   if (provider === 'claude') return openCliLogin('Claude Login', 'claude auth login');
   if (provider === 'antigravity') return openCliLogin('Antigravity', 'agy');
   return openCliLogin('Codex Login', 'codex login');
 }
 
-function schedulePolling() {
-  clearInterval(pollTimer);
-  pollTimer = setInterval(refreshUsage, settings.refreshSeconds * 1000);
+function openExternal(url) {
+  if (typeof url !== 'string' || !/^https:\/\//.test(url)) return false;
+  hidePopup();
+  void shell.openExternal(url);
+  return true;
 }
 
 async function checkForUpdate() {
@@ -737,82 +593,73 @@ async function checkForUpdate() {
   return { available, current, latest };
 }
 
-ipcMain.handle('get-settings', () => settings);
-ipcMain.handle('open-settings', () => openSettings());
-ipcMain.handle('refresh-usage', refreshUsage);
-ipcMain.handle('set-opacity', (_event, value) => {
-  settings = sanitizeSettings({ ...settings, opacity: value });
-  window?.setOpacity(settings.opacity);
-  saveSettings();
-  sendSnapshot();
-  return settings;
-});
-ipcMain.handle('set-refresh-seconds', (_event, value) => {
-  settings = sanitizeSettings({ ...settings, refreshSeconds: value });
-  saveSettings();
-  schedulePolling();
-  sendSnapshot();
-  return settings;
-});
-ipcMain.handle('set-show-provider', (_event, id, enabled) => {
-  const key = {
-    claude: 'showClaude',
-    cursor: 'showCursor',
-    codex: 'showCodex',
-    antigravity: 'showAntigravity'
-  }[id];
-  if (!key) return settings;
-  settings = sanitizeSettings({ ...settings, [key]: Boolean(enabled) });
-  saveSettings();
-  updateTrayTooltip();
-  applyDockBounds();
-  sendSnapshot();
-  void refreshUsage();
-  return settings;
-});
+function quit() {
+  isQuitting = true;
+  app.quit();
+}
+
+ipcMain.handle('get-state', () => snapshot());
+ipcMain.handle('update-settings', (_event, patch) => updateSettings(patch));
+ipcMain.handle('refresh', (_event, id) => (
+  id ? refreshProvider(id, { force: true }) : refreshAll({ force: true })
+));
 ipcMain.handle('open-login', (_event, provider) => openLogin(provider));
+ipcMain.handle('open-external', (_event, url) => openExternal(url));
 ipcMain.handle('check-for-update', checkForUpdate);
 ipcMain.handle('open-mobile-pairing', openMobilePairing);
 ipcMain.handle('get-mobile-access-status', getMobileAccessStatus);
 ipcMain.handle('enable-mobile-access', enableMobileAccess);
 ipcMain.handle('get-mobile-pairing', getMobilePairing);
-ipcMain.on('dock-transition-complete', (_event, payload = {}) => {
-  finalizeTransition(payload.finalState, payload.generation);
-});
-
-app.whenReady().then(() => {
-  const automationMode = process.argv.some(arg =>
-    arg.startsWith('--screenshot=') || arg.startsWith('--verify-state=')
-  );
-  createWindow();
-  createTray();
-  startMobileServer().catch(error => {
-    console.warn('Throttle mobile server could not start:', error.message);
-  });
-  schedulePolling();
-  if (!automationMode) {
-    cursorTimer = setInterval(monitorCursor, CURSOR_POLL_MS);
-    fullscreenTimer = setInterval(() => void monitorFullscreen(), FULLSCREEN_POLL_MS);
+ipcMain.handle('suspend-shortcut', (_event, suspended) => {
+  if (suspended) {
+    if (registeredShortcut) globalShortcut.unregister(registeredShortcut);
+    registeredShortcut = null;
+  } else {
+    registerShortcut();
   }
-  screen.on('display-added', handleDisplayChange);
-  screen.on('display-removed', handleDisplayChange);
-  screen.on('display-metrics-changed', handleDisplayChange);
-  setTimeout(refreshUsage, 400);
 });
+ipcMain.on('popup-size', (_event, height) => {
+  const next = Math.round(Number(height));
+  if (!Number.isFinite(next) || next < 120 || next === popupHeight) return;
+  popupHeight = next;
+  if (popup?.isVisible()) positionPopup();
+});
+ipcMain.on('tray-image', (_event, payload) => setTrayImage(payload));
+ipcMain.on('hide-popup', hidePopup);
+ipcMain.on('quit', quit);
 
-app.on('activate', () => {
-  if (window && !window.isDestroyed()) showDock();
-});
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => showPopup());
+  app.whenReady().then(() => {
+    app.setAppUserModelId('com.parthjadhav.throttle');
+    settings = loadSettings();
+    nativeTheme.themeSource = settings.theme;
+    loadUsageCache();
+    createTray();
+    createPopup();
+    registerShortcut();
+    if (app.isPackaged) applyLoginItem();
+    startMobileServer().catch(error => {
+      console.warn('Throttle mobile server could not start:', error.message);
+    });
+    schedulePolling();
+    setTimeout(() => void refreshAll(), 400);
+    screen.on('display-metrics-changed', () => popup?.isVisible() && positionPopup());
+    nativeTheme.on('updated', sendSnapshot);
+  });
+}
+
 app.on('window-all-closed', () => {});
 app.on('before-quit', () => {
   isQuitting = true;
+  if (!settings) return;
   clearInterval(pollTimer);
-  clearInterval(cursorTimer);
-  clearInterval(fullscreenTimer);
-  clearTimeout(transitionFallback);
-  client?.stop();
+  writeUsageCache();
+  globalShortcut.unregisterAll();
+  codexClient?.stop();
   void mobileServer?.stop();
   mobileAccessWindow?.destroy();
-  settingsWindow?.destroy();
   tray?.destroy();
 });

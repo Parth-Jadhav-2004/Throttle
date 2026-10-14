@@ -1,7 +1,7 @@
 {
   "name": "throttle",
-  "version": "0.1.5",
-  "description": "An always-on-top Windows dock for live Claude, Cursor, Codex, and Antigravity usage limits.",
+  "version": "0.2.0",
+  "description": "A Windows tray app for live Claude, Codex, Cursor, and Antigravity usage limits.",
   "main": "src/main.js",
   "author": "Parth Jadhav",
   "license": "MIT",
@@ -26,9 +26,6 @@
       "assets/throttle.ico",
       "package.json"
     ],
-    "asarUnpack": [
-      "node_modules/get-windows/**/*.node"
-    ],
     "win": {
       "icon": "assets/throttle.ico",
       "target": [
@@ -46,7 +43,6 @@
     }
   },
   "dependencies": {
-    "get-windows": "^9.3.0",
     "qrcode": "^1.5.4"
   }
 }
