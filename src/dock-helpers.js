@@ -1,23 +1,40 @@
-const DEFAULT_DOCK_WIDTH = 420;
-const DEFAULT_DOCK_HEIGHT = 220;
-const DEFAULT_HOTSPOT_WIDTH = 240;
+const DOCK_PANEL_WIDTH = 104;
+const TOOLTIP_GUTTER = 300;
+const DOCK_WIDTH = DOCK_PANEL_WIDTH + TOOLTIP_GUTTER;
+const SLOT_HEIGHT = 78;
+const SLOT_GAP = 14;
+const DOCK_PAD_Y = 68;
+const SETTINGS_BUTTON = 36;
+const SETTINGS_FLOAT_SPACE = 10;
+const DEFAULT_HOTSPOT_HEIGHT = 320;
 const DEFAULT_EDGE_DEPTH = 2;
 
-function getDockBounds(display, width = DEFAULT_DOCK_WIDTH, height = DEFAULT_DOCK_HEIGHT) {
+function getDockHeight(visibleCount) {
+  const n = Math.max(1, Number(visibleCount) || 0);
+  return DOCK_PAD_Y * 2 + n * SLOT_HEIGHT + Math.max(0, n - 1) * SLOT_GAP + SETTINGS_FLOAT_SPACE;
+}
+
+function getDockBounds(display, visibleCount = 3) {
+  const height = getDockHeight(visibleCount);
   return {
-    x: Math.round(display.bounds.x + (display.bounds.width - width) / 2),
-    y: display.bounds.y,
-    width,
+    x: Math.round(display.bounds.x + display.bounds.width - DOCK_WIDTH),
+    y: Math.round(display.bounds.y + (display.bounds.height - height) / 2),
+    width: DOCK_WIDTH,
     height
   };
 }
 
-function getHotspotBounds(display, hotspotWidth = DEFAULT_HOTSPOT_WIDTH, edgeDepth = DEFAULT_EDGE_DEPTH) {
+function getHotspotBounds(
+  display,
+  hotspotHeight = DEFAULT_HOTSPOT_HEIGHT,
+  edgeDepth = DEFAULT_EDGE_DEPTH
+) {
+  const height = Math.min(display.bounds.height, hotspotHeight);
   return {
-    x: display.bounds.x + (display.bounds.width - hotspotWidth) / 2,
-    y: display.bounds.y,
-    width: hotspotWidth,
-    height: edgeDepth
+    x: display.bounds.x + display.bounds.width - edgeDepth,
+    y: display.bounds.y + (display.bounds.height - height) / 2,
+    width: edgeDepth,
+    height
   };
 }
 
@@ -28,10 +45,13 @@ function containsPoint(bounds, point) {
     point.y < bounds.y + bounds.height;
 }
 
-function isTopEdgeExposed(display, pointerX, allDisplays) {
-  const pointAbove = { x: pointerX, y: display.bounds.y - 1 };
+function isRightEdgeExposed(display, pointerY, allDisplays) {
+  const pointRight = {
+    x: display.bounds.x + display.bounds.width,
+    y: pointerY
+  };
   return !allDisplays.some(other =>
-    other.id !== display.id && containsPoint(other.bounds, pointAbove)
+    other.id !== display.id && containsPoint(other.bounds, pointRight)
   );
 }
 
@@ -39,11 +59,11 @@ function isHotspotHit(
   point,
   display,
   allDisplays,
-  hotspotWidth = DEFAULT_HOTSPOT_WIDTH,
+  hotspotHeight = DEFAULT_HOTSPOT_HEIGHT,
   edgeDepth = DEFAULT_EDGE_DEPTH
 ) {
-  const hotspot = getHotspotBounds(display, hotspotWidth, edgeDepth);
-  return containsPoint(hotspot, point) && isTopEdgeExposed(display, point.x, allDisplays);
+  return containsPoint(getHotspotBounds(display, hotspotHeight, edgeDepth), point) &&
+    isRightEdgeExposed(display, point.y, allDisplays);
 }
 
 function coversDisplay(windowBounds, displayBounds, tolerance = 1) {
@@ -87,21 +107,28 @@ function isFullscreenForeground(activeWindow, display) {
   return coversDisplay(activeWindow.contentBounds || activeWindow.bounds, display.bounds, 0);
 }
 
-function shouldSuppressAutomaticReveal(activeWindow, display, inspectionFailed = false) {
+function shouldHideForFullscreen(activeWindow, display, inspectionFailed = false) {
   return inspectionFailed || isFullscreenForeground(activeWindow, display);
 }
 
 module.exports = {
-  DEFAULT_DOCK_WIDTH,
-  DEFAULT_DOCK_HEIGHT,
-  DEFAULT_HOTSPOT_WIDTH,
+  DOCK_PANEL_WIDTH,
+  TOOLTIP_GUTTER,
+  DOCK_WIDTH,
+  SLOT_HEIGHT,
+  SLOT_GAP,
+  DOCK_PAD_Y,
+  SETTINGS_BUTTON,
+  SETTINGS_FLOAT_SPACE,
+  DEFAULT_HOTSPOT_HEIGHT,
   DEFAULT_EDGE_DEPTH,
+  getDockHeight,
   getDockBounds,
   getHotspotBounds,
-  isTopEdgeExposed,
+  isRightEdgeExposed,
   isHotspotHit,
   coversDisplay,
   normalizeActiveWindowBounds,
   isFullscreenForeground,
-  shouldSuppressAutomaticReveal
+  shouldHideForFullscreen
 };

@@ -1,40 +1,68 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  DOCK_WIDTH,
+  DOCK_PAD_Y,
+  SLOT_HEIGHT,
+  SLOT_GAP,
+  SETTINGS_BUTTON,
+  SETTINGS_FLOAT_SPACE,
+  getDockHeight,
   getDockBounds,
   getHotspotBounds,
-  isTopEdgeExposed,
+  isRightEdgeExposed,
   isHotspotHit,
   coversDisplay,
   normalizeActiveWindowBounds,
   isFullscreenForeground,
-  shouldSuppressAutomaticReveal
+  shouldHideForFullscreen
 } = require('../src/dock-helpers');
 
 const primary = { id: 1, bounds: { x: 0, y: 0, width: 1920, height: 1080 } };
 
-test('centers the fixed dock on displays with positive and negative coordinates', () => {
-  assert.deepEqual(getDockBounds(primary), { x: 750, y: 0, width: 420, height: 220 });
+test('pins a vertical dock to the right edge and vertically centers it', () => {
+  const three = getDockBounds(primary, 3);
+  assert.equal(three.width, DOCK_WIDTH);
+  assert.equal(three.x, 1920 - DOCK_WIDTH);
+  assert.equal(three.y, Math.round((1080 - three.height) / 2));
+  assert.equal(three.height, getDockHeight(3));
+  assert.ok(getDockHeight(1) < getDockHeight(2));
+  assert.ok(getDockHeight(2) < getDockHeight(3));
+});
+
+test('centers the dock on displays with negative coordinates', () => {
+  const display = { id: 2, bounds: { x: -1920, y: -240, width: 1920, height: 1080 } };
+  const bounds = getDockBounds(display, 3);
+  assert.equal(bounds.x, -1920 + 1920 - DOCK_WIDTH);
+  assert.equal(bounds.y, Math.round(-240 + (1080 - bounds.height) / 2));
+});
+
+test('uses a centered hotspot at the exact right edge', () => {
   assert.deepEqual(
-    getDockBounds({ id: 2, bounds: { x: -1920, y: -240, width: 1920, height: 1080 } }),
-    { x: -1170, y: -240, width: 420, height: 220 }
+    getHotspotBounds(primary),
+    { x: 1918, y: 380, width: 2, height: 320 }
   );
+  assert.equal(isHotspotHit({ x: 1918, y: 380 }, primary, [primary]), true);
+  assert.equal(isHotspotHit({ x: 1919, y: 699 }, primary, [primary]), true);
+  assert.equal(isHotspotHit({ x: 1917, y: 500 }, primary, [primary]), false);
+  assert.equal(isHotspotHit({ x: 1919, y: 700 }, primary, [primary]), false);
 });
 
-test('uses a 240 DIP center hotspot at only the exact top edge', () => {
-  assert.deepEqual(getHotspotBounds(primary), { x: 840, y: 0, width: 240, height: 2 });
-  assert.equal(isHotspotHit({ x: 840, y: 0 }, primary, [primary]), true);
-  assert.equal(isHotspotHit({ x: 1079, y: 1 }, primary, [primary]), true);
-  assert.equal(isHotspotHit({ x: 839, y: 0 }, primary, [primary]), false);
-  assert.equal(isHotspotHit({ x: 1080, y: 0 }, primary, [primary]), false);
-  assert.equal(isHotspotHit({ x: 960, y: 2 }, primary, [primary]), false);
-  assert.equal(isHotspotHit({ x: 200, y: 0 }, primary, [primary]), false);
+test('rejects a right boundary shared with another display', () => {
+  const right = { id: 2, bounds: { x: 1920, y: 0, width: 1920, height: 1080 } };
+  assert.equal(isRightEdgeExposed(primary, 540, [primary, right]), false);
+  assert.equal(isHotspotHit({ x: 1919, y: 540 }, primary, [primary, right]), false);
 });
 
-test('rejects a top boundary that is internal to a vertically stacked monitor', () => {
-  const lower = { id: 2, bounds: { x: 0, y: 1080, width: 1920, height: 1080 } };
-  assert.equal(isTopEdgeExposed(lower, 960, [primary, lower]), false);
-  assert.equal(isHotspotHit({ x: 960, y: 1080 }, lower, [primary, lower]), false);
+test('keeps a minimum pill height when every service is hidden', () => {
+  assert.equal(getDockHeight(0), getDockHeight(1));
+});
+
+test('reserves space below the curve for a floating settings button', () => {
+  const stack = DOCK_PAD_Y * 2 + 2 * SLOT_HEIGHT + SLOT_GAP;
+  assert.equal(getDockHeight(2), stack + SETTINGS_FLOAT_SPACE);
+  assert.ok(SETTINGS_FLOAT_SPACE > 0);
+  assert.ok(SETTINGS_FLOAT_SPACE < SETTINGS_BUTTON);
 });
 
 test('detects full display coverage without treating a normal maximized window as full-screen', () => {
@@ -85,7 +113,7 @@ test('excludes Windows shell and Throttle surfaces from full-screen suppression'
   }, primary), false);
 });
 
-test('foreground inspection failures fail closed for automatic reveals', () => {
-  assert.equal(shouldSuppressAutomaticReveal(undefined, primary, true), true);
-  assert.equal(shouldSuppressAutomaticReveal(undefined, primary, false), false);
+test('foreground inspection failures hide the dock', () => {
+  assert.equal(shouldHideForFullscreen(undefined, primary, true), true);
+  assert.equal(shouldHideForFullscreen(undefined, primary, false), false);
 });

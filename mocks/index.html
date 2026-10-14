@@ -1,0 +1,1286 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Throttle // 10 Right-Edge Design Specimens</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ======================================================================
+       MASTHEAD / TOP CONTROL BAR
+       ====================================================================== -->
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div class="brand-block">
+        <span class="brand-badge">THROTTLE</span>
+        <div>
+          <h1 class="brand-title">Right-Edge UI Specimens</h1>
+          <span class="brand-tag">Pure Black &amp; White • 10 Desktop Mocks</span>
+        </div>
+      </div>
+
+      <div class="controls-bar">
+        <!-- View Mode Switcher -->
+        <div class="view-btn-group" aria-label="View Layout">
+          <button class="btn active" data-view="sheet" title="4 designs per A4-style presentation sheet">📑 A4 Sheets</button>
+          <button class="btn" data-view="stack" title="Single column mobile-friendly view">📱 Stack</button>
+          <button class="btn" data-view="compare" title="Side by side design comparator">⚖️ Compare</button>
+          <button class="btn" data-view="simulator" title="Full desktop screen simulator">🖥️ Simulator</button>
+        </div>
+
+        <!-- Global Provider Switcher -->
+        <div class="provider-btn-group" aria-label="Global Provider Preview">
+          <button class="btn active" data-provider="claude" title="Claude 78%">Claude</button>
+          <button class="btn" data-provider="cursor" title="Cursor 13%">Cursor</button>
+          <button class="btn" data-provider="codex" title="Codex 42%">Codex</button>
+          <button class="btn" data-provider="antigravity" title="Antigravity 0%">Antigravity</button>
+        </div>
+
+        <!-- Quick utilities -->
+        <button class="btn btn-standalone" id="theme-toggle-btn">Mode: Paper</button>
+        <button class="btn btn-standalone" id="btn-show-qr">📲 Mobile Link</button>
+      </div>
+    </div>
+
+    <!-- Tailscale Banner for Direct Mobile Preview -->
+    <div class="mobile-tailscale-banner">
+      <div class="tailscale-inner">
+        <div class="tailscale-links">
+          <strong>⚡ TAILSCALE LIVE:</strong>
+          <a class="tailscale-link" href="https://devil-1.tail1ed514.ts.net/mocks" target="_blank">https://devil-1.tail1ed514.ts.net/mocks</a>
+          <span>•</span>
+          <span class="tailscale-ip">LAN: <code>http://100.92.113.36:8899</code></span>
+        </div>
+        <div class="specimen-rules">
+          <span>✓ NO GRADIENTS</span>
+          <span>✓ NO VIOLET</span>
+          <span>✓ PURE BLACK (#000)</span>
+          <span>✓ RIGHT-DOCK ONLY</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================================
+       MAIN CONTENT: 3 PRESENTATION SHEETS (10 DESIGNS TOTAL)
+       "think of it as 4 pictures on a4 size paper that type"
+       ====================================================================== -->
+  <main class="main-wrapper" id="sheets-view">
+
+    <!-- ====================================================================
+         SHEET 01: DESIGNS 01 TO 04
+         ==================================================================== -->
+    <section class="sheet" id="sheet-1">
+      <div class="sheet-header">
+        <div class="sheet-title-group">
+          <h2>SPECIMEN SHEET 01 // TECHNICAL &amp; TACTILE (01 – 04)</h2>
+          <div class="sheet-subtitle">Calibrated engineering scales, Swiss typography, edge tabs, and hardware synthesizer consoles</div>
+        </div>
+        <div class="sheet-stamp">PAGE 01 / 03</div>
+      </div>
+
+      <div class="sheet-grid-2x2">
+
+        <!-- DESIGN 01: THE ARCHITECTURAL RULER -->
+        <article class="design-card" data-design-id="01">
+          <div class="card-header">
+            <span class="card-number-badge">01</span>
+            <span class="card-title-text">The Architectural Ruler</span>
+            <div class="card-actions">
+              <button class="card-action-btn btn-toggle-flyout">Hide Flyout</button>
+            </div>
+          </div>
+          <div class="desktop-viewport">
+            <span class="desktop-viewport-tag">PC Display // Right Edge</span>
+            <div class="desktop-edge-indicator"></div>
+
+            <div class="mock-dock-stage">
+              <!-- Flyout -->
+              <div class="mock-flyout">
+                <div class="flyout-header">
+                  <span class="flyout-title-text">Claude Usage</span>
+                  <span style="font-family:var(--font-mono); font-size:10px;">REF: #A1</span>
+                </div>
+                <div class="flyout-body">
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.7 Sonnet</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 78%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">78% Used</div>
+                  </div>
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.5 Haiku</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 14%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">14% Used</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dock 01 -->
+              <div class="dock-ruler">
+                <div class="ruler-ticks">
+                  <div class="ruler-tick major"></div>
+                  <div class="ruler-tick"></div>
+                  <div class="ruler-tick"></div>
+                  <div class="ruler-tick major"></div>
+                  <div class="ruler-tick"></div>
+                  <div class="ruler-tick"></div>
+                  <div class="ruler-tick major"></div>
+                  <div class="ruler-tick"></div>
+                  <div class="ruler-tick"></div>
+                  <div class="ruler-tick major"></div>
+                </div>
+
+                <div class="ruler-item active" data-provider-target="claude" title="Claude 78%">
+                  <span class="ruler-tag">[C]</span>
+                  <span class="ruler-val">78%</span>
+                  <div class="ruler-needle"></div>
+                </div>
+
+                <div class="ruler-item" data-provider-target="cursor" title="Cursor 13%">
+                  <span class="ruler-tag">[R]</span>
+                  <span class="ruler-val">13%</span>
+                  <div class="ruler-needle"></div>
+                </div>
+
+                <div class="ruler-item" data-provider-target="codex" title="Codex 42%">
+                  <span class="ruler-tag">[X]</span>
+                  <span class="ruler-val">42%</span>
+                  <div class="ruler-needle"></div>
+                </div>
+
+                <div class="ruler-item" data-provider-target="antigravity" title="Antigravity 0%">
+                  <span class="ruler-tag">[A]</span>
+                  <span class="ruler-val">00%</span>
+                  <div class="ruler-needle"></div>
+                </div>
+
+                <div class="ruler-settings" title="Settings">⚙</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <p class="card-desc">Calibrated drafting ruler with laser tick marks and needle gauges etched into the display margin.</p>
+            <div class="card-specs">
+              <span>WIDTH: 48PX</span>
+              <span>SCALE: MILLIMETER TICKS</span>
+              <span>NEEDLE: PRECISION INDICATOR</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- DESIGN 02: THE SWISS MONOLITH -->
+        <article class="design-card" data-design-id="02">
+          <div class="card-header">
+            <span class="card-number-badge">02</span>
+            <span class="card-title-text">The Swiss Monolith</span>
+            <div class="card-actions">
+              <button class="card-action-btn btn-toggle-flyout">Hide Flyout</button>
+            </div>
+          </div>
+          <div class="desktop-viewport">
+            <span class="desktop-viewport-tag">PC Display // Right Edge</span>
+            <div class="desktop-edge-indicator"></div>
+
+            <div class="mock-dock-stage">
+              <!-- Flyout -->
+              <div class="mock-flyout">
+                <div class="flyout-header">
+                  <span class="flyout-title-text">Claude Usage</span>
+                  <span style="font-family:var(--font-mono); font-size:10px;">MANIFEST // 02</span>
+                </div>
+                <div class="flyout-body">
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.7 Sonnet</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 78%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">78% Used</div>
+                  </div>
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.5 Haiku</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 14%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">14% Used</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dock 02 -->
+              <div class="dock-monolith">
+                <div class="monolith-slot active" data-provider-target="claude" title="Claude 78%">
+                  <span class="monolith-abbr">CLD</span>
+                  <span class="monolith-num">78</span>
+                  <div class="monolith-blocks">
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                  </div>
+                </div>
+
+                <div class="monolith-slot" data-provider-target="cursor" title="Cursor 13%">
+                  <span class="monolith-abbr">CRS</span>
+                  <span class="monolith-num">13</span>
+                  <div class="monolith-blocks">
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                  </div>
+                </div>
+
+                <div class="monolith-slot" data-provider-target="codex" title="Codex 42%">
+                  <span class="monolith-abbr">CDX</span>
+                  <span class="monolith-num">42</span>
+                  <div class="monolith-blocks">
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip filled"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                  </div>
+                </div>
+
+                <div class="monolith-slot" data-provider-target="antigravity" title="Antigravity 0%">
+                  <span class="monolith-abbr">AGV</span>
+                  <span class="monolith-num">00</span>
+                  <div class="monolith-blocks">
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                    <div class="monolith-block-pip"></div>
+                  </div>
+                </div>
+
+                <div class="monolith-settings" title="Settings">⚙ PREFS</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <p class="card-desc">Brutalist poster aesthetic with heavy typographic numerals and 10-segment black block meters.</p>
+            <div class="card-specs">
+              <span>WIDTH: 62PX</span>
+              <span>GRID: 10-BLOCK METERS</span>
+              <span>TYPE: HEAVY GROTESQUE</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- DESIGN 03: THE MINIMALIST EDGE NOTCH -->
+        <article class="design-card" data-design-id="03">
+          <div class="card-header">
+            <span class="card-number-badge">03</span>
+            <span class="card-title-text">The Minimalist Edge Notch</span>
+            <div class="card-actions">
+              <button class="card-action-btn btn-toggle-flyout">Hide Flyout</button>
+            </div>
+          </div>
+          <div class="desktop-viewport">
+            <span class="desktop-viewport-tag">PC Display // Right Edge</span>
+            <div class="desktop-edge-indicator"></div>
+
+            <div class="mock-dock-stage">
+              <!-- Flyout -->
+              <div class="mock-flyout">
+                <div class="flyout-header">
+                  <span class="flyout-title-text">Claude Usage</span>
+                  <span style="font-family:var(--font-mono); font-size:10px;">NOTCH // 03</span>
+                </div>
+                <div class="flyout-body">
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.7 Sonnet</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 78%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">78% Used</div>
+                  </div>
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.5 Haiku</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 14%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">14% Used</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dock 03 -->
+              <div class="dock-notch-stack">
+                <div class="notch-tab active" data-provider-target="claude" title="Claude 78%">
+                  <div class="notch-bar"><div class="notch-bar-fill" style="height: 78%;"></div></div>
+                  <span class="notch-pct">78%</span>
+                  <span class="notch-icon">C</span>
+                </div>
+
+                <div class="notch-tab" data-provider-target="cursor" title="Cursor 13%">
+                  <div class="notch-bar"><div class="notch-bar-fill" style="height: 13%;"></div></div>
+                  <span class="notch-pct">13%</span>
+                  <span class="notch-icon">R</span>
+                </div>
+
+                <div class="notch-tab" data-provider-target="codex" title="Codex 42%">
+                  <div class="notch-bar"><div class="notch-bar-fill" style="height: 42%;"></div></div>
+                  <span class="notch-pct">42%</span>
+                  <span class="notch-icon">X</span>
+                </div>
+
+                <div class="notch-tab" data-provider-target="antigravity" title="Antigravity 0%">
+                  <div class="notch-bar"><div class="notch-bar-fill" style="height: 0%;"></div></div>
+                  <span class="notch-pct">00%</span>
+                  <span class="notch-icon">▲</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <p class="card-desc">Discrete ceramic micro-tabs that hug the screen margin with vertical fill bars and flyout on hover.</p>
+            <div class="card-specs">
+              <span>WIDTH: 32PX REST / 72PX HOVER</span>
+              <span>STYLE: MICRO PILL TABS</span>
+              <span>ZERO DESKTOP CLUTTER</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- DESIGN 04: THE HARDWARE SYNTH RACK -->
+        <article class="design-card" data-design-id="04">
+          <div class="card-header">
+            <span class="card-number-badge">04</span>
+            <span class="card-title-text">The Hardware Synth Rack</span>
+            <div class="card-actions">
+              <button class="card-action-btn btn-toggle-flyout">Hide Flyout</button>
+            </div>
+          </div>
+          <div class="desktop-viewport">
+            <span class="desktop-viewport-tag">PC Display // Right Edge</span>
+            <div class="desktop-edge-indicator"></div>
+
+            <div class="mock-dock-stage">
+              <!-- Flyout -->
+              <div class="mock-flyout">
+                <div class="flyout-header">
+                  <span class="flyout-title-text">Claude Usage</span>
+                  <span style="font-family:var(--font-mono); font-size:10px;">CHASSIS // 04</span>
+                </div>
+                <div class="flyout-body">
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.7 Sonnet</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 78%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">78% Used</div>
+                  </div>
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.5 Haiku</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 14%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">14% Used</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dock 04 -->
+              <div class="dock-synth">
+                <span class="synth-screw screw-tl">+</span>
+                <span class="synth-screw screw-bl">+</span>
+
+                <div class="synth-ch active" data-provider-target="claude" title="Claude 78%">
+                  <span class="synth-ch-label">CH 01</span>
+                  <div class="synth-ladder">
+                    <div class="synth-led on"></div>
+                    <div class="synth-led on"></div>
+                    <div class="synth-led on"></div>
+                    <div class="synth-led on"></div>
+                    <div class="synth-led on"></div>
+                    <div class="synth-led on"></div>
+                    <div class="synth-led on"></div>
+                    <div class="synth-led"></div>
+                  </div>
+                  <span class="synth-val">78%</span>
+                </div>
+
+                <div class="synth-ch" data-provider-target="cursor" title="Cursor 13%">
+                  <span class="synth-ch-label">CH 02</span>
+                  <div class="synth-ladder">
+                    <div class="synth-led on"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                  </div>
+                  <span class="synth-val">13%</span>
+                </div>
+
+                <div class="synth-ch" data-provider-target="codex" title="Codex 42%">
+                  <span class="synth-ch-label">CH 03</span>
+                  <div class="synth-ladder">
+                    <div class="synth-led on"></div>
+                    <div class="synth-led on"></div>
+                    <div class="synth-led on"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                  </div>
+                  <span class="synth-val">42%</span>
+                </div>
+
+                <div class="synth-ch" data-provider-target="antigravity" title="Antigravity 0%">
+                  <span class="synth-ch-label">CH 04</span>
+                  <div class="synth-ladder">
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                    <div class="synth-led"></div>
+                  </div>
+                  <span class="synth-val">00%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <p class="card-desc">Teenage Engineering audio hardware style with vertical LED-ladder segments and chassis screws.</p>
+            <div class="card-specs">
+              <span>WIDTH: 60PX</span>
+              <span>V-LADDER: 8-LEVEL SEGMENTS</span>
+              <span>CHASSIS HARDWARE</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+
+    <!-- ====================================================================
+         SHEET 02: DESIGNS 05 TO 08
+         ==================================================================== -->
+    <section class="sheet" id="sheet-2">
+      <div class="sheet-header">
+        <div class="sheet-title-group">
+          <h2>SPECIMEN SHEET 02 // CHRONO, EDITORIAL &amp; TERMINAL (05 – 08)</h2>
+          <div class="sheet-subtitle">Horology dials, print broadsheets, hacker command shells, and floating detached islands</div>
+        </div>
+        <div class="sheet-stamp">PAGE 02 / 03</div>
+      </div>
+
+      <div class="sheet-grid-2x2">
+
+        <!-- DESIGN 05: THE CHRONO GAUGE CLUSTER -->
+        <article class="design-card" data-design-id="05">
+          <div class="card-header">
+            <span class="card-number-badge">05</span>
+            <span class="card-title-text">The Chrono Gauge Cluster</span>
+            <div class="card-actions">
+              <button class="card-action-btn btn-toggle-flyout">Hide Flyout</button>
+            </div>
+          </div>
+          <div class="desktop-viewport">
+            <span class="desktop-viewport-tag">PC Display // Right Edge</span>
+            <div class="desktop-edge-indicator"></div>
+
+            <div class="mock-dock-stage">
+              <!-- Flyout -->
+              <div class="mock-flyout">
+                <div class="flyout-header">
+                  <span class="flyout-title-text">Claude Usage</span>
+                  <span style="font-family:var(--font-mono); font-size:10px;">CHRONO // 05</span>
+                </div>
+                <div class="flyout-body">
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.7 Sonnet</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 78%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">78% Used</div>
+                  </div>
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.5 Haiku</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 14%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">14% Used</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dock 05 -->
+              <div class="dock-chrono">
+                <div class="chrono-dial active" data-provider-target="claude" title="Claude 78%">
+                  <div class="chrono-circle-wrap">
+                    <svg viewBox="0 0 36 36">
+                      <circle class="chrono-circle-bg" cx="18" cy="18" r="14"></circle>
+                      <circle class="chrono-circle-fill" cx="18" cy="18" r="14" stroke-dashoffset="22"></circle>
+                    </svg>
+                    <div class="chrono-center-info">
+                      <span class="chrono-center-logo">C</span>
+                      <span class="chrono-pct-label">78</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="chrono-dial" data-provider-target="cursor" title="Cursor 13%">
+                  <div class="chrono-circle-wrap">
+                    <svg viewBox="0 0 36 36">
+                      <circle class="chrono-circle-bg" cx="18" cy="18" r="14"></circle>
+                      <circle class="chrono-circle-fill" cx="18" cy="18" r="14" stroke-dashoffset="87"></circle>
+                    </svg>
+                    <div class="chrono-center-info">
+                      <span class="chrono-center-logo">R</span>
+                      <span class="chrono-pct-label">13</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="chrono-dial" data-provider-target="codex" title="Codex 42%">
+                  <div class="chrono-circle-wrap">
+                    <svg viewBox="0 0 36 36">
+                      <circle class="chrono-circle-bg" cx="18" cy="18" r="14"></circle>
+                      <circle class="chrono-circle-fill" cx="18" cy="18" r="14" stroke-dashoffset="58"></circle>
+                    </svg>
+                    <div class="chrono-center-info">
+                      <span class="chrono-center-logo">X</span>
+                      <span class="chrono-pct-label">42</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="chrono-dial" data-provider-target="antigravity" title="Antigravity 0%">
+                  <div class="chrono-circle-wrap">
+                    <svg viewBox="0 0 36 36">
+                      <circle class="chrono-circle-bg" cx="18" cy="18" r="14"></circle>
+                      <circle class="chrono-circle-fill" cx="18" cy="18" r="14" stroke-dashoffset="100"></circle>
+                    </svg>
+                    <div class="chrono-center-info">
+                      <span class="chrono-center-logo">▲</span>
+                      <span class="chrono-pct-label">00</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <p class="card-desc">Luxury watch chronograph &amp; aircraft cockpit altimeter dials with pure black needle sweeps.</p>
+            <div class="card-specs">
+              <span>WIDTH: 58PX</span>
+              <span>RADIAL SWEEP: SOLID BLACK</span>
+              <span>HOROLOGY COCKPIT</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- DESIGN 06: THE EDITORIAL BROADSHEET -->
+        <article class="design-card" data-design-id="06">
+          <div class="card-header">
+            <span class="card-number-badge">06</span>
+            <span class="card-title-text">The Editorial Broadsheet</span>
+            <div class="card-actions">
+              <button class="card-action-btn btn-toggle-flyout">Hide Flyout</button>
+            </div>
+          </div>
+          <div class="desktop-viewport">
+            <span class="desktop-viewport-tag">PC Display // Right Edge</span>
+            <div class="desktop-edge-indicator"></div>
+
+            <div class="mock-dock-stage">
+              <!-- Flyout -->
+              <div class="mock-flyout">
+                <div class="flyout-header">
+                  <span class="flyout-title-text">Claude Usage</span>
+                  <span style="font-family:var(--font-serif); font-style:italic;">Dispatch N° 06</span>
+                </div>
+                <div class="flyout-body">
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span style="font-family:var(--font-serif); font-weight:bold;">Claude 3.7 Sonnet</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 78%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">[ 78% Consumed ]</div>
+                  </div>
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span style="font-family:var(--font-serif); font-weight:bold;">Claude 3.5 Haiku</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 14%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">[ 14% Consumed ]</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dock 06 -->
+              <div class="dock-editorial">
+                <div class="editorial-slot active" data-provider-target="claude" title="Claude 78%">
+                  <span class="editorial-roman">I.</span>
+                  <span class="editorial-label">CLAUDE</span>
+                  <span class="editorial-pct">[78%]</span>
+                  <div class="editorial-rule"></div>
+                </div>
+
+                <div class="editorial-slot" data-provider-target="cursor" title="Cursor 13%">
+                  <span class="editorial-roman">II.</span>
+                  <span class="editorial-label">CURSOR</span>
+                  <span class="editorial-pct">[13%]</span>
+                  <div class="editorial-rule"></div>
+                </div>
+
+                <div class="editorial-slot" data-provider-target="codex" title="Codex 42%">
+                  <span class="editorial-roman">III.</span>
+                  <span class="editorial-label">CODEX</span>
+                  <span class="editorial-pct">[42%]</span>
+                  <div class="editorial-rule"></div>
+                </div>
+
+                <div class="editorial-slot" data-provider-target="antigravity" title="Antigravity 0%">
+                  <span class="editorial-roman">IV.</span>
+                  <span class="editorial-label">ANTIGR</span>
+                  <span class="editorial-pct">[00%]</span>
+                  <div class="editorial-rule"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <p class="card-desc">Literary magazine index column with Roman numerals, bracketed figures, and double-rule margins.</p>
+            <div class="card-specs">
+              <span>WIDTH: 52PX</span>
+              <span>MARGIN: DOUBLE RULE BORDER</span>
+              <span>ROMAN NUMERALS: I - IV</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- DESIGN 07: THE CYBERPUNK ASCII TERMINAL -->
+        <article class="design-card" data-design-id="07">
+          <div class="card-header">
+            <span class="card-number-badge">07</span>
+            <span class="card-title-text">The Cyberpunk ASCII Terminal</span>
+            <div class="card-actions">
+              <button class="card-action-btn btn-toggle-flyout">Hide Flyout</button>
+            </div>
+          </div>
+          <div class="desktop-viewport">
+            <span class="desktop-viewport-tag">PC Display // Right Edge</span>
+            <div class="desktop-edge-indicator"></div>
+
+            <div class="mock-dock-stage">
+              <!-- Flyout -->
+              <div class="mock-flyout terminal-theme">
+                <div class="flyout-header">
+                  <span class="flyout-title-text">&gt; CLAUDE_QUOTA</span>
+                  <span style="font-size:9px;">tty1</span>
+                </div>
+                <div class="flyout-body">
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Sonnet-3.7</span>
+                      <span class="flyout-reset-timer">T-04:58:12</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 78%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">[########..] 78%</div>
+                  </div>
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Haiku-3.5</span>
+                      <span class="flyout-reset-timer">T-04:58:12</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 14%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">[#.........] 14%</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dock 07 -->
+              <div class="dock-terminal">
+                <div class="terminal-header">
+                  <span>DEV</span>
+                  <span>&gt;_</span>
+                </div>
+
+                <div class="terminal-slot active" data-provider-target="claude" title="Claude 78%">
+                  <div class="terminal-tag">C:SONNET</div>
+                  <div class="terminal-bar">[#####]</div>
+                  <div class="terminal-val">78%</div>
+                </div>
+
+                <div class="terminal-slot" data-provider-target="cursor" title="Cursor 13%">
+                  <div class="terminal-tag">R:FAST</div>
+                  <div class="terminal-bar">[#....]</div>
+                  <div class="terminal-val">13%</div>
+                </div>
+
+                <div class="terminal-slot" data-provider-target="codex" title="Codex 42%">
+                  <div class="terminal-tag">X:GPT4O</div>
+                  <div class="terminal-bar">[###..]</div>
+                  <div class="terminal-val">42%</div>
+                </div>
+
+                <div class="terminal-slot" data-provider-target="antigravity" title="Antigravity 0%">
+                  <div class="terminal-tag">A:GEMINI</div>
+                  <div class="terminal-bar">[.....]</div>
+                  <div class="terminal-val">00%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <p class="card-desc">Monospaced hacker shell buffer docked on the bezel with ASCII block bars and terminal commands.</p>
+            <div class="card-specs">
+              <span>WIDTH: 68PX</span>
+              <span>ASCII PROGRESS METERS</span>
+              <span>PURE MONOSPACE CLI</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- DESIGN 08: THE FLOATING CAPSULE STACK -->
+        <article class="design-card" data-design-id="08">
+          <div class="card-header">
+            <span class="card-number-badge">08</span>
+            <span class="card-title-text">The Floating Capsule Stack</span>
+            <div class="card-actions">
+              <button class="card-action-btn btn-toggle-flyout">Hide Flyout</button>
+            </div>
+          </div>
+          <div class="desktop-viewport">
+            <span class="desktop-viewport-tag">PC Display // Right Edge</span>
+            <div class="desktop-edge-indicator"></div>
+
+            <div class="mock-dock-stage">
+              <!-- Flyout -->
+              <div class="mock-flyout">
+                <div class="flyout-header">
+                  <span class="flyout-title-text">Claude Usage</span>
+                  <span style="font-family:var(--font-mono); font-size:10px;">CAPSULE // 08</span>
+                </div>
+                <div class="flyout-body">
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.7 Sonnet</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 78%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">78% Used</div>
+                  </div>
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.5 Haiku</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 14%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">14% Used</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dock 08 -->
+              <div class="dock-capsules">
+                <div class="capsule-item active" data-provider-target="claude" title="Claude 78%">
+                  <div class="capsule-ring">
+                    <svg viewBox="0 0 32 32">
+                      <circle class="capsule-ring-bg" cx="16" cy="16" r="12"></circle>
+                      <circle class="capsule-ring-fg" cx="16" cy="16" r="12" stroke-dasharray="75" stroke-dashoffset="16"></circle>
+                    </svg>
+                    <span class="capsule-icon">C</span>
+                  </div>
+                  <span class="capsule-pct">78%</span>
+                </div>
+
+                <div class="capsule-item" data-provider-target="cursor" title="Cursor 13%">
+                  <div class="capsule-ring">
+                    <svg viewBox="0 0 32 32">
+                      <circle class="capsule-ring-bg" cx="16" cy="16" r="12"></circle>
+                      <circle class="capsule-ring-fg" cx="16" cy="16" r="12" stroke-dasharray="75" stroke-dashoffset="65"></circle>
+                    </svg>
+                    <span class="capsule-icon">R</span>
+                  </div>
+                  <span class="capsule-pct">13%</span>
+                </div>
+
+                <div class="capsule-item" data-provider-target="codex" title="Codex 42%">
+                  <div class="capsule-ring">
+                    <svg viewBox="0 0 32 32">
+                      <circle class="capsule-ring-bg" cx="16" cy="16" r="12"></circle>
+                      <circle class="capsule-ring-fg" cx="16" cy="16" r="12" stroke-dasharray="75" stroke-dashoffset="43"></circle>
+                    </svg>
+                    <span class="capsule-icon">X</span>
+                  </div>
+                  <span class="capsule-pct">42%</span>
+                </div>
+
+                <div class="capsule-item" data-provider-target="antigravity" title="Antigravity 0%">
+                  <div class="capsule-ring">
+                    <svg viewBox="0 0 32 32">
+                      <circle class="capsule-ring-bg" cx="16" cy="16" r="12"></circle>
+                      <circle class="capsule-ring-fg" cx="16" cy="16" r="12" stroke-dasharray="75" stroke-dashoffset="75"></circle>
+                    </svg>
+                    <span class="capsule-icon">▲</span>
+                  </div>
+                  <span class="capsule-pct">00%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <p class="card-desc">Detached floating island capsules that hover 8px away from the screen edge with tactile depth.</p>
+            <div class="card-specs">
+              <span>MARGIN: 8PX DETACHED</span>
+              <span>STYLE: FLOATING PILL ISLANDS</span>
+              <span>ARC: SOLID BLACK STROKE</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+
+    <!-- ====================================================================
+         SHEET 03: DESIGNS 09 TO 10
+         ==================================================================== -->
+    <section class="sheet" id="sheet-3">
+      <div class="sheet-header">
+        <div class="sheet-title-group">
+          <h2>SPECIMEN SHEET 03 // ACCORDION &amp; E-PAPER (09 – 10)</h2>
+          <div class="sheet-subtitle">Zero-popup inline collapsible sidebars and Dieter Rams dot-matrix tactile arrays</div>
+        </div>
+        <div class="sheet-stamp">PAGE 03 / 03</div>
+      </div>
+
+      <div class="sheet-grid-2x2">
+
+        <!-- DESIGN 09: THE INLINE EDGE ACCORDION -->
+        <article class="design-card" data-design-id="09">
+          <div class="card-header">
+            <span class="card-number-badge">09</span>
+            <span class="card-title-text">The Inline Edge Accordion</span>
+            <div class="card-actions">
+              <span style="font-family:var(--font-mono); font-size:10px;">ZERO-POPUP SIDEBAR</span>
+            </div>
+          </div>
+          <div class="desktop-viewport">
+            <span class="desktop-viewport-tag">PC Display // Right Edge</span>
+            <div class="desktop-edge-indicator"></div>
+
+            <div class="mock-dock-stage">
+              <!-- Dock 09 (Self-contained expanding accordion, no detached popup!) -->
+              <div class="dock-accordion">
+                <div class="accordion-header">
+                  <span>THROTTLE // DOCK</span>
+                  <span>⚙</span>
+                </div>
+
+                <div class="accordion-pane expanded" data-provider-target="claude">
+                  <div class="accordion-summary">
+                    <span class="accordion-name">Claude</span>
+                    <span class="accordion-val">78%</span>
+                  </div>
+                  <div class="accordion-details">
+                    <div>Sonnet 3.7: <strong>78%</strong> (4h 58m)</div>
+                    <div class="flyout-bar-track" style="margin: 4px 0;">
+                      <div class="flyout-bar-fill" style="width: 78%;"></div>
+                    </div>
+                    <div>Haiku 3.5: <strong>14%</strong></div>
+                  </div>
+                </div>
+
+                <div class="accordion-pane" data-provider-target="cursor">
+                  <div class="accordion-summary">
+                    <span class="accordion-name">Cursor</span>
+                    <span class="accordion-val">13%</span>
+                  </div>
+                  <div class="accordion-details">
+                    <div>Fast: <strong>65/500</strong> (Oct 1)</div>
+                    <div class="flyout-bar-track" style="margin: 4px 0;">
+                      <div class="flyout-bar-fill" style="width: 13%;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-pane" data-provider-target="codex">
+                  <div class="accordion-summary">
+                    <span class="accordion-name">Codex</span>
+                    <span class="accordion-val">42%</span>
+                  </div>
+                  <div class="accordion-details">
+                    <div>GPT-4o: <strong>42%</strong> (2h 15m)</div>
+                    <div class="flyout-bar-track" style="margin: 4px 0;">
+                      <div class="flyout-bar-fill" style="width: 42%;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-pane" data-provider-target="antigravity">
+                  <div class="accordion-summary">
+                    <span class="accordion-name">Antigravity</span>
+                    <span class="accordion-val">00%</span>
+                  </div>
+                  <div class="accordion-details">
+                    <div>Gemini 2.5: <strong>0%</strong> (4h 58m)</div>
+                    <div class="flyout-bar-track" style="margin: 4px 0;">
+                      <div class="flyout-bar-fill" style="width: 0%;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <p class="card-desc">Zero floating popup needed! The entire right dock accordion-expands inline directly against the edge.</p>
+            <div class="card-specs">
+              <span>WIDTH: 180PX EXPANDED</span>
+              <span>INTEGRATED INLINE ACCORDION</span>
+              <span>ZERO DETACHED POPUPS</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- DESIGN 10: THE DOT-MATRIX E-PAPER -->
+        <article class="design-card" data-design-id="10">
+          <div class="card-header">
+            <span class="card-number-badge">10</span>
+            <span class="card-title-text">The Dot-Matrix E-Paper</span>
+            <div class="card-actions">
+              <button class="card-action-btn btn-toggle-flyout">Hide Flyout</button>
+            </div>
+          </div>
+          <div class="desktop-viewport">
+            <span class="desktop-viewport-tag">PC Display // Right Edge</span>
+            <div class="desktop-edge-indicator"></div>
+
+            <div class="mock-dock-stage">
+              <!-- Flyout -->
+              <div class="mock-flyout">
+                <div class="flyout-header">
+                  <span class="flyout-title-text">Claude Usage</span>
+                  <span style="font-family:var(--font-mono); font-size:10px;">E-INK // 10</span>
+                </div>
+                <div class="flyout-body">
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.7 Sonnet</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 78%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">78% Used</div>
+                  </div>
+                  <div class="flyout-row">
+                    <div class="flyout-row-header">
+                      <span>Claude 3.5 Haiku</span>
+                      <span class="flyout-reset-timer">Resets in 4h 58m</span>
+                    </div>
+                    <div class="flyout-bar-track">
+                      <div class="flyout-bar-fill" style="width: 14%;"></div>
+                    </div>
+                    <div class="flyout-pct-text">14% Used</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dock 10 -->
+              <div class="dock-epaper">
+                <div class="epaper-item active" data-provider-target="claude" title="Claude 78%">
+                  <span class="epaper-tag">CLD</span>
+                  <div class="epaper-matrix">
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                  </div>
+                  <span class="epaper-pct">78%</span>
+                </div>
+
+                <div class="epaper-item" data-provider-target="cursor" title="Cursor 13%">
+                  <span class="epaper-tag">CRS</span>
+                  <div class="epaper-matrix">
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                  </div>
+                  <span class="epaper-pct">13%</span>
+                </div>
+
+                <div class="epaper-item" data-provider-target="codex" title="Codex 42%">
+                  <span class="epaper-tag">CDX</span>
+                  <div class="epaper-matrix">
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot active"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                  </div>
+                  <span class="epaper-pct">42%</span>
+                </div>
+
+                <div class="epaper-item" data-provider-target="antigravity" title="Antigravity 0%">
+                  <span class="epaper-tag">AGV</span>
+                  <div class="epaper-matrix">
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                    <div class="epaper-dot"></div>
+                  </div>
+                  <span class="epaper-pct">00%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <p class="card-desc">Braun / Dieter Rams e-paper aesthetic with a 12-dot tactile matrix representation for zero screen distraction.</p>
+            <div class="card-specs">
+              <span>WIDTH: 58PX</span>
+              <span>DISPLAY: 12-DOT BRAUN ARRAY</span>
+              <span>CALM E-PAPER TEXTURE</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ======================================================================
+       MODAL 1: FULL DESKTOP MONITOR SIMULATOR
+       ====================================================================== -->
+  <div class="modal-backdrop" id="simulator-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">Desktop Monitor Simulation</span>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <label style="font-family:var(--font-mono); font-size:12px;">Active Design:
+            <select id="sim-design-select" style="font-family:var(--font-mono); padding:3px 6px; border:1px solid #000; background:#fff;">
+              <option value="01">01 - The Architectural Ruler</option>
+              <option value="02">02 - The Swiss Monolith</option>
+              <option value="03">03 - The Minimalist Edge Notch</option>
+              <option value="04">04 - The Hardware Synth Rack</option>
+              <option value="05">05 - The Chrono Gauge Cluster</option>
+              <option value="06">06 - The Editorial Broadsheet</option>
+              <option value="07">07 - The Cyberpunk ASCII Terminal</option>
+              <option value="08">08 - The Floating Capsule Stack</option>
+              <option value="09">09 - The Inline Edge Accordion</option>
+              <option value="10">10 - The Dot-Matrix E-Paper</option>
+            </select>
+          </label>
+          <button class="modal-close-btn" id="close-sim-modal">✕ Close</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="monitor-frame">
+          <div class="monitor-topbar">
+            <div class="monitor-window-controls">
+              <span class="monitor-win-btn"></span>
+              <span class="monitor-win-btn"></span>
+              <span class="monitor-win-btn"></span>
+            </div>
+            <span>DESKTOP MONITOR // 1920 × 1080 RIGHT DISPLAY BOUNDARY</span>
+            <span style="font-size:10px;">THROTTLE ACTIVE</span>
+          </div>
+
+          <div id="sim-dock-container" style="height:100%; display:flex; align-items:center; justify-content:flex-end;">
+            <!-- Injected via JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 2: SIDE-BY-SIDE DESIGN COMPARATOR
+       ====================================================================== -->
+  <div class="modal-backdrop" id="compare-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">Side-By-Side Design Comparator</span>
+        <button class="modal-close-btn" id="close-comp-modal">✕ Close</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; gap:16px; margin-bottom:10px;">
+          <div style="flex:1;">
+            <label style="font-family:var(--font-mono); font-size:12px; font-weight:700;">Design A:
+              <select id="comp-design-a" style="font-family:var(--font-mono); padding:4px 8px; border:1px solid #000; width:100%; margin-top:4px;">
+                <option value="01" selected>01 - The Architectural Ruler</option>
+                <option value="02">02 - The Swiss Monolith</option>
+                <option value="03">03 - The Minimalist Edge Notch</option>
+                <option value="04">04 - The Hardware Synth Rack</option>
+                <option value="05">05 - The Chrono Gauge Cluster</option>
+                <option value="06">06 - The Editorial Broadsheet</option>
+                <option value="07">07 - The Cyberpunk ASCII Terminal</option>
+                <option value="08">08 - The Floating Capsule Stack</option>
+                <option value="09">09 - The Inline Edge Accordion</option>
+                <option value="10">10 - The Dot-Matrix E-Paper</option>
+              </select>
+            </label>
+          </div>
+          <div style="flex:1;">
+            <label style="font-family:var(--font-mono); font-size:12px; font-weight:700;">Design B:
+              <select id="comp-design-b" style="font-family:var(--font-mono); padding:4px 8px; border:1px solid #000; width:100%; margin-top:4px;">
+                <option value="01">01 - The Architectural Ruler</option>
+                <option value="02" selected>02 - The Swiss Monolith</option>
+                <option value="03">03 - The Minimalist Edge Notch</option>
+                <option value="04">04 - The Hardware Synth Rack</option>
+                <option value="05">05 - The Chrono Gauge Cluster</option>
+                <option value="06">06 - The Editorial Broadsheet</option>
+                <option value="07">07 - The Cyberpunk ASCII Terminal</option>
+                <option value="08">08 - The Floating Capsule Stack</option>
+                <option value="09">09 - The Inline Edge Accordion</option>
+                <option value="10">10 - The Dot-Matrix E-Paper</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="comparator-grid">
+          <div id="compare-slot-a"></div>
+          <div id="compare-slot-b"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 3: MOBILE TAILSCALE QR CODE & ACCESS
+       ====================================================================== -->
+  <div class="modal-backdrop" id="qr-modal">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <span class="modal-title">Open on Mobile via Tailscale</span>
+        <button class="modal-close-btn" id="close-qr-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="qr-container">
+          <p style="font-size:13px; color:#333;">Point your iPhone or Android camera at this QR code to view the live responsive specimens on your phone:</p>
+          <div class="qr-box">
+            <img src="assets/tailscale-qr.svg" alt="Tailscale QR Code" width="220" height="220" style="display:block;">
+          </div>
+          <div class="qr-url-box" id="qr-target-url">https://devil-1.tail1ed514.ts.net/mocks</div>
+          <div style="display:flex; gap:10px; width:100%;">
+            <button class="btn btn-standalone" id="btn-copy-url" style="flex:1; justify-content:center;">Copy URL</button>
+            <a class="btn btn-standalone" href="https://devil-1.tail1ed514.ts.net/mocks" target="_blank" style="flex:1; justify-content:center; text-decoration:none;">Direct Open</a>
+          </div>
+          <p style="font-size:11px; font-family:var(--font-mono); color:#666;">Ensure your mobile device is connected to Tailnet (jadhavparth2004@).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

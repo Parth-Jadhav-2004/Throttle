@@ -1,0 +1,1526 @@
+/* ==========================================================================
+   THROTTLE // DESIGN SPECIMEN DECK
+   STRICT PALETTE: Pure Black (#000000) & White (#ffffff). No gradients. No violet.
+   ========================================================================== */
+
+:root {
+  --c-black: #000000;
+  --c-white: #ffffff;
+  --c-canvas: #f6f6f6;
+  --c-canvas-sheet: #ffffff;
+  --c-border: #000000;
+  --c-border-light: #d0d0d0;
+  --c-track: #e2e2e2;
+  --c-muted: #555555;
+  --c-badge-bg: #000000;
+  --c-badge-fg: #ffffff;
+  
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Courier New", monospace;
+  --font-serif: "Didot", "Bodoni MT", "Cinzel", "Playfair Display", Georgia, serif;
+}
+
+/* Optional inverted theme */
+body.theme-inverted {
+  --c-black: #ffffff;
+  --c-white: #000000;
+  --c-canvas: #111111;
+  --c-canvas-sheet: #080808;
+  --c-border: #ffffff;
+  --c-border-light: #333333;
+  --c-track: #2a2a2a;
+  --c-muted: #aaaaaa;
+  --c-badge-bg: #ffffff;
+  --c-badge-fg: #000000;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--c-canvas);
+  color: var(--c-black);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+/* --------------------------------------------------------------------------
+   HEADER & CONTROL BAR
+   -------------------------------------------------------------------------- */
+.masthead {
+  background: var(--c-white);
+  border-bottom: 2px solid var(--c-black);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.masthead-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-badge {
+  background: var(--c-black);
+  color: var(--c-white);
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 13px;
+  padding: 4px 8px;
+  letter-spacing: 1px;
+}
+
+.brand-title {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  color: var(--c-black);
+}
+
+.brand-tag {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--c-muted);
+}
+
+.controls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-btn-group,
+.provider-btn-group {
+  display: inline-flex;
+  border: 1px solid var(--c-black);
+  background: var(--c-white);
+}
+
+.btn {
+  background: var(--c-white);
+  color: var(--c-black);
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn:not(:last-child) {
+  border-right: 1px solid var(--c-black);
+}
+
+.btn.active,
+.btn:hover {
+  background: var(--c-black);
+  color: var(--c-white);
+}
+
+.btn-standalone {
+  border: 1px solid var(--c-black);
+  padding: 6px 14px;
+}
+
+.mobile-tailscale-banner {
+  background: var(--c-white);
+  border-bottom: 1px solid var(--c-black);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 8px 20px;
+}
+
+.tailscale-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tailscale-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tailscale-link {
+  color: var(--c-black);
+  font-weight: 700;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.specimen-rules {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--c-muted);
+}
+
+/* --------------------------------------------------------------------------
+   MAIN CONTAINER & A4 SHEETS LAYOUT
+   "think of it as 4 pictures on a4 size paper that type"
+   -------------------------------------------------------------------------- */
+.main-wrapper {
+  max-width: 1440px;
+  margin: 28px auto;
+  padding: 0 20px;
+}
+
+.sheet-container {
+  margin-bottom: 48px;
+}
+
+.sheet {
+  background: var(--c-canvas-sheet);
+  border: 2px solid var(--c-black);
+  box-shadow: 6px 6px 0px var(--c-black);
+  padding: 24px;
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.sheet-header {
+  border-bottom: 2px solid var(--c-black);
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.sheet-title-group h2 {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+.sheet-subtitle {
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.sheet-stamp {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--c-black);
+  padding: 3px 8px;
+  text-transform: uppercase;
+}
+
+/* 2x2 Grid inside an A4 Sheet */
+.sheet-grid-2x2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 980px) {
+  .sheet-grid-2x2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   MOCK CARD (EACH SECTION ACTS AS A DIFFERENT DESIGN)
+   -------------------------------------------------------------------------- */
+.design-card {
+  border: 1.5px solid var(--c-black);
+  background: var(--c-white);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-header {
+  border-bottom: 1px solid var(--c-black);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--c-white);
+}
+
+.card-number-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 900;
+  background: var(--c-black);
+  color: var(--c-white);
+  padding: 2px 6px;
+}
+
+.card-title-text {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.2px;
+  flex: 1;
+  margin-left: 10px;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-action-btn {
+  background: var(--c-white);
+  border: 1px solid var(--c-black);
+  color: var(--c-black);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.card-action-btn:hover {
+  background: var(--c-black);
+  color: var(--c-white);
+}
+
+/* Visual Canvas simulating PC Desktop right side */
+.desktop-viewport {
+  background: #fbfbfb;
+  border-bottom: 1px solid var(--c-black);
+  position: relative;
+  height: 380px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  overflow: hidden;
+  padding-right: 0px;
+  background-image: radial-gradient(circle, #d9d9d9 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Subtle desktop wallpaper simulation watermark */
+.desktop-viewport-tag {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: #888888;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.desktop-edge-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 4px;
+  background: var(--c-black);
+}
+
+/* Card description footer */
+.card-footer {
+  padding: 10px 14px;
+  font-size: 12px;
+  background: var(--c-white);
+}
+
+.card-desc {
+  font-size: 12px;
+  color: var(--c-black);
+  margin-bottom: 6px;
+}
+
+.card-specs {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--c-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.card-specs span {
+  border: 1px solid var(--c-border-light);
+  padding: 2px 5px;
+}
+
+/* --------------------------------------------------------------------------
+   SHARED DOCK INTERACTION ELEMENTS
+   -------------------------------------------------------------------------- */
+.mock-dock-stage {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.mock-flyout {
+  position: absolute;
+  right: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--c-white);
+  border: 1.5px solid var(--c-black);
+  box-shadow: 4px 4px 0px var(--c-black);
+  z-index: 50;
+  width: 250px;
+  pointer-events: auto;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.mock-flyout.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(10px);
+}
+
+/* Arrow pointing to dock */
+.mock-flyout::after {
+  content: "";
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 8px solid var(--c-black);
+}
+
+.flyout-header {
+  border-bottom: 1px solid var(--c-black);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--c-white);
+}
+
+.flyout-title-text {
+  font-weight: 800;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flyout-body {
+  padding: 10px;
+}
+
+.flyout-row {
+  margin-bottom: 10px;
+}
+
+.flyout-row:last-child {
+  margin-bottom: 0;
+}
+
+.flyout-row-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.flyout-reset-timer {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--c-muted);
+}
+
+.flyout-bar-track {
+  height: 6px;
+  background: var(--c-track);
+  border: 1px solid var(--c-black);
+  position: relative;
+  overflow: hidden;
+}
+
+.flyout-bar-fill {
+  height: 100%;
+  background: var(--c-black);
+}
+
+.flyout-pct-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   DESIGN 01: THE ARCHITECTURAL RULER (Engineering Vernier Scale)
+   -------------------------------------------------------------------------- */
+.dock-ruler {
+  background: var(--c-white);
+  border-left: 2px solid var(--c-black);
+  width: 48px;
+  height: 330px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px 0;
+  position: relative;
+}
+
+.ruler-ticks {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 0;
+  pointer-events: none;
+}
+
+.ruler-tick {
+  height: 1px;
+  background: var(--c-black);
+  width: 5px;
+}
+
+.ruler-tick.major {
+  width: 8px;
+  height: 2px;
+}
+
+.ruler-item {
+  position: relative;
+  padding: 6px 4px 6px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border-left: 2px solid transparent;
+}
+
+.ruler-item.active {
+  background: var(--c-black);
+  color: var(--c-white);
+}
+
+.ruler-item.active .ruler-val {
+  color: var(--c-white);
+}
+
+.ruler-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.ruler-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.ruler-needle {
+  width: 100%;
+  height: 3px;
+  background: var(--c-black);
+}
+.ruler-item.active .ruler-needle {
+  background: var(--c-white);
+}
+
+.ruler-settings {
+  text-align: center;
+  padding-top: 6px;
+  border-top: 1px solid var(--c-black);
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   DESIGN 02: THE SWISS MONOLITH (Brutalist Heavy Typography & Solid Blocks)
+   -------------------------------------------------------------------------- */
+.dock-monolith {
+  background: var(--c-white);
+  border: 2px solid var(--c-black);
+  border-right: none;
+  width: 62px;
+  display: flex;
+  flex-direction: column;
+}
+
+.monolith-slot {
+  padding: 10px 6px;
+  border-bottom: 2px solid var(--c-black);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  background: var(--c-white);
+  transition: all 0.1s;
+}
+
+.monolith-slot:hover,
+.monolith-slot.active {
+  background: var(--c-black);
+  color: var(--c-white);
+}
+
+.monolith-abbr {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.monolith-num {
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+  margin: 3px 0;
+  letter-spacing: -1px;
+}
+
+.monolith-blocks {
+  display: flex;
+  gap: 2px;
+  width: 44px;
+}
+
+.monolith-block-pip {
+  flex: 1;
+  height: 5px;
+  background: var(--c-track);
+}
+
+.monolith-slot.active .monolith-block-pip {
+  background: #444444;
+}
+
+.monolith-block-pip.filled {
+  background: var(--c-black);
+}
+
+.monolith-slot.active .monolith-block-pip.filled {
+  background: var(--c-white);
+}
+
+.monolith-settings {
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 12px;
+}
+.monolith-settings:hover {
+  background: var(--c-black);
+  color: var(--c-white);
+}
+
+/* --------------------------------------------------------------------------
+   DESIGN 03: THE MINIMALIST EDGE NOTCH (Micro Edge Tabs / Subtle Floating)
+   -------------------------------------------------------------------------- */
+.dock-notch-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.notch-tab {
+  background: var(--c-white);
+  border: 1.5px solid var(--c-black);
+  border-right: none;
+  border-radius: 20px 0 0 20px;
+  padding: 6px 10px 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: -2px 2px 0px var(--c-black);
+  transition: transform 0.15s ease, background 0.15s;
+}
+
+.notch-tab:hover,
+.notch-tab.active {
+  transform: translateX(-6px);
+  background: var(--c-black);
+  color: var(--c-white);
+}
+
+.notch-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notch-tab.active svg {
+  fill: var(--c-white);
+}
+
+.notch-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.notch-bar {
+  width: 3px;
+  height: 18px;
+  background: var(--c-track);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.notch-tab.active .notch-bar {
+  background: #333333;
+}
+
+.notch-bar-fill {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: var(--c-black);
+}
+
+.notch-tab.active .notch-bar-fill {
+  background: var(--c-white);
+}
+
+/* --------------------------------------------------------------------------
+   DESIGN 04: THE HARDWARE SYNTH RACK (Teenage Engineering Console)
+   -------------------------------------------------------------------------- */
+.dock-synth {
+  background: var(--c-white);
+  border: 2px solid var(--c-black);
+  border-right: none;
+  width: 60px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.synth-screw {
+  position: absolute;
+  font-size: 8px;
+  font-family: var(--font-mono);
+  color: var(--c-black);
+  line-height: 1;
+}
+.screw-tl { top: 3px; left: 4px; }
+.screw-bl { bottom: 3px; left: 4px; }
+
+.synth-ch {
+  border: 1px solid var(--c-black);
+  padding: 4px 2px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: var(--c-white);
+}
+
+.synth-ch.active {
+  background: var(--c-black);
+  color: var(--c-white);
+}
+
+.synth-ch-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.synth-ladder {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  width: 32px;
+}
+
+.synth-led {
+  height: 3px;
+  background: var(--c-track);
+}
+
+.synth-ch.active .synth-led {
+  background: #333333;
+}
+
+.synth-led.on {
+  background: var(--c-black);
+}
+
+.synth-ch.active .synth-led.on {
+  background: var(--c-white);
+}
+
+.synth-val {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+/* --------------------------------------------------------------------------
+   DESIGN 05: THE CHRONO GAUGE CLUSTER (Horology / Cockpit Dial)
+   -------------------------------------------------------------------------- */
+.dock-chrono {
+  background: var(--c-white);
+  border-left: 2px solid var(--c-black);
+  width: 58px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 4px;
+}
+
+.chrono-dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 0;
+  position: relative;
+}
+
+.chrono-dial.active .chrono-circle-wrap {
+  transform: scale(1.08);
+}
+
+.chrono-circle-wrap {
+  width: 44px;
+  height: 44px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+
+.chrono-circle-wrap svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.chrono-circle-bg {
+  stroke: var(--c-track);
+  stroke-width: 4;
+  fill: none;
+}
+
+.chrono-circle-fill {
+  stroke: var(--c-black);
+  stroke-width: 4;
+  stroke-linecap: square;
+  fill: none;
+  stroke-dasharray: 100;
+}
+
+.chrono-center-info {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chrono-center-logo {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.chrono-pct-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  margin-top: 1px;
+}
+
+/* --------------------------------------------------------------------------
+   DESIGN 06: THE EDITORIAL BROADSHEET (Print Book Spine / Roman Numerals)
+   -------------------------------------------------------------------------- */
+.dock-editorial {
+  background: var(--c-white);
+  border-left: 3px double var(--c-black);
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.editorial-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  cursor: pointer;
+  position: relative;
+  border-left: 2px solid transparent;
+}
+
+.editorial-slot.active {
+  background: var(--c-black);
+  color: var(--c-white);
+}
+
+.editorial-roman {
+  font-family: var(--font-serif);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.editorial-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.editorial-pct {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 900;
+  margin: 4px 0;
+}
+
+.editorial-rule {
+  width: 24px;
+  height: 2px;
+  background: var(--c-black);
+}
+
+.editorial-slot.active .editorial-rule {
+  background: var(--c-white);
+}
+
+/* --------------------------------------------------------------------------
+   DESIGN 07: THE CYBERPUNK ASCII TERMINAL (CLI Hacker Prompt)
+   -------------------------------------------------------------------------- */
+.dock-terminal {
+  background: #000000;
+  color: #ffffff;
+  border-left: 2px solid #ffffff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 10px 6px;
+  width: 68px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.terminal-header {
+  border-bottom: 1px dashed #ffffff;
+  padding-bottom: 4px;
+  font-size: 9px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.terminal-slot {
+  padding: 4px 2px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.terminal-slot.active {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+}
+
+.terminal-tag {
+  font-weight: 800;
+  font-size: 9px;
+}
+
+.terminal-bar {
+  font-size: 8px;
+  letter-spacing: -1px;
+  line-height: 1;
+  margin: 2px 0;
+}
+
+.terminal-val {
+  font-weight: 900;
+  font-size: 10px;
+}
+
+/* Terminal Flyout override */
+.mock-flyout.terminal-theme {
+  background: #000000;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  box-shadow: 4px 4px 0px #ffffff;
+}
+.mock-flyout.terminal-theme::after {
+  border-left-color: #ffffff;
+}
+.mock-flyout.terminal-theme .flyout-header {
+  background: #000000;
+  border-bottom: 1px dashed #ffffff;
+  color: #ffffff;
+}
+.mock-flyout.terminal-theme .flyout-title-text {
+  color: #ffffff;
+}
+.mock-flyout.terminal-theme .flyout-bar-track {
+  border: 1px solid #ffffff;
+  background: #222222;
+}
+.mock-flyout.terminal-theme .flyout-bar-fill {
+  background: #ffffff;
+}
+.mock-flyout.terminal-theme .flyout-reset-timer {
+  color: #aaaaaa;
+}
+
+/* --------------------------------------------------------------------------
+   DESIGN 08: THE FLOATING CAPSULE STACK (Detached Islands)
+   -------------------------------------------------------------------------- */
+.dock-capsules {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-right: 8px;
+}
+
+.capsule-item {
+  background: var(--c-white);
+  border: 1.5px solid var(--c-black);
+  border-radius: 24px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 2px 3px 0px var(--c-black);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.capsule-item:hover,
+.capsule-item.active {
+  transform: translateX(-4px);
+  background: var(--c-black);
+  color: var(--c-white);
+}
+
+.capsule-ring {
+  width: 28px;
+  height: 28px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.capsule-ring svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.capsule-ring-bg {
+  stroke: var(--c-track);
+  stroke-width: 3;
+  fill: none;
+}
+
+.capsule-ring-fg {
+  stroke: var(--c-black);
+  stroke-width: 3;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.capsule-item.active .capsule-ring-fg {
+  stroke: var(--c-white);
+}
+
+.capsule-item.active .capsule-ring-bg {
+  stroke: #444444;
+}
+
+.capsule-icon {
+  font-size: 10px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+}
+
+.capsule-pct {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* --------------------------------------------------------------------------
+   DESIGN 09: THE INLINE EDGE ACCORDION (Zero-Popup Expanding Drawer)
+   -------------------------------------------------------------------------- */
+.dock-accordion {
+  background: var(--c-white);
+  border: 2px solid var(--c-black);
+  border-right: none;
+  display: flex;
+  flex-direction: column;
+  width: 180px;
+  height: 340px;
+  overflow: hidden;
+  box-shadow: -4px 0 0 var(--c-black);
+}
+
+.accordion-header {
+  border-bottom: 1px solid var(--c-black);
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 900;
+  background: var(--c-black);
+  color: var(--c-white);
+  display: flex;
+  justify-content: space-between;
+}
+
+.accordion-pane {
+  border-bottom: 1px solid var(--c-black);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.accordion-summary {
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.accordion-name {
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.accordion-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.accordion-details {
+  display: none;
+  background: #f8f8f8;
+  padding: 8px 10px;
+  border-top: 1px dashed var(--c-black);
+  font-size: 10px;
+}
+
+.accordion-pane.expanded .accordion-details {
+  display: block;
+}
+
+.accordion-pane.expanded {
+  background: var(--c-white);
+}
+
+.accordion-pane.expanded .accordion-summary {
+  font-weight: 900;
+}
+
+/* --------------------------------------------------------------------------
+   DESIGN 10: THE DOT-MATRIX E-PAPER (Braun / E-Ink Grid Pattern)
+   -------------------------------------------------------------------------- */
+.dock-epaper {
+  background: #ffffff;
+  border-left: 2px solid var(--c-black);
+  width: 58px;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 4px;
+  gap: 8px;
+}
+
+.epaper-item {
+  border: 1px solid var(--c-black);
+  padding: 5px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: #ffffff;
+}
+
+.epaper-item.active {
+  background: var(--c-black);
+  color: var(--c-white);
+}
+
+.epaper-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.epaper-matrix {
+  display: grid;
+  grid-template-columns: repeat(4, 5px);
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.epaper-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  border: 1px solid var(--c-black);
+  background: transparent;
+}
+
+.epaper-dot.active {
+  background: var(--c-black);
+}
+
+.epaper-item.active .epaper-dot {
+  border-color: var(--c-white);
+}
+
+.epaper-item.active .epaper-dot.active {
+  background: var(--c-white);
+}
+
+.epaper-pct {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* --------------------------------------------------------------------------
+   FULL SCREEN SIMULATOR MODAL & COMPARATOR
+   -------------------------------------------------------------------------- */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.modal-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-content {
+  background: var(--c-white);
+  border: 2px solid var(--c-black);
+  box-shadow: 8px 8px 0px var(--c-black);
+  width: 100%;
+  max-width: 1100px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  border-bottom: 2px solid var(--c-black);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--c-white);
+}
+
+.modal-title {
+  font-weight: 900;
+  font-size: 14px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.modal-close-btn {
+  background: var(--c-white);
+  border: 1px solid var(--c-black);
+  padding: 4px 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.modal-close-btn:hover {
+  background: var(--c-black);
+  color: var(--c-white);
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Simulated PC Monitor in Simulator View */
+.monitor-frame {
+  border: 4px solid var(--c-black);
+  border-radius: 6px;
+  background: #f0f0f0;
+  position: relative;
+  height: 520px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  background-image: radial-gradient(circle, #ccc 1px, transparent 1px);
+  background-size: 20px 20px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+}
+
+.monitor-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: var(--c-white);
+  border-bottom: 2px solid var(--c-black);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.monitor-window-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.monitor-win-btn {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--c-black);
+  border-radius: 50%;
+}
+
+/* Side by Side Comparator Grid */
+.comparator-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   QR CODE & MOBILE MODAL
+   -------------------------------------------------------------------------- */
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  gap: 16px;
+}
+
+.qr-box {
+  border: 2px solid var(--c-black);
+  padding: 12px;
+  background: #ffffff;
+}
+
+.qr-box canvas {
+  display: block;
+}
+
+.qr-url-box {
+  background: #f0f0f0;
+  border: 1px solid var(--c-black);
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  word-break: break-all;
+  max-width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   MOBILE RESPONSIVENESS (< 768px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 90px;
+  }
+
+  .masthead-inner {
+    padding: 10px 14px;
+  }
+
+  .brand-title {
+    font-size: 15px;
+  }
+
+  .controls-bar {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .view-btn-group,
+  .provider-btn-group {
+    width: 100%;
+  }
+
+  .btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+
+  .main-wrapper {
+    padding: 0 10px;
+    margin: 14px auto;
+  }
+
+  .sheet {
+    padding: 14px;
+    box-shadow: 3px 3px 0px var(--c-black);
+  }
+
+  .desktop-viewport {
+    height: 300px;
+  }
+
+  .mock-flyout {
+    width: 200px;
+    right: calc(100% + 6px);
+  }
+
+  .comparator-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   PRINT STYLESHEET (A4 Presentation Printout)
+   "think of it as 4 pictures on a4 size paper that type"
+   -------------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+    padding: 0;
+  }
+
+  .masthead,
+  .mobile-tailscale-banner,
+  .modal-backdrop,
+  .card-actions,
+  .controls-bar {
+    display: none !important;
+  }
+
+  .main-wrapper {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .sheet {
+    page-break-after: always;
+    border: 2px solid #000000;
+    box-shadow: none;
+    margin-bottom: 0;
+    padding: 15mm 10mm;
+    height: 275mm;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sheet-grid-2x2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 8mm;
+    flex: 1;
+  }
+
+  .desktop-viewport {
+    height: auto;
+    flex: 1;
+  }
+
+  .design-card {
+    page-break-inside: avoid;
+  }
+}

@@ -14,8 +14,11 @@ const fs = require('node:fs');
 const { spawn } = require('node:child_process');
 const QRCode = require('qrcode');
 const { CodexClient } = require('./codex-client');
+const { CursorClient } = require('./cursor-client');
+const { ClaudeClient } = require('./claude-client');
+const { AntigravityClient } = require('./antigravity-client');
 const { normalizeRateLimits, mergeRateLimitSnapshot } = require('./rate-limits');
-const { sanitizeSettings } = require('./settings');
+const { sanitizeSettings, visibleProviderIds } = require('./settings');
 const { isNewerVersion } = require('./version');
 const {
   DEFAULT_PORT,
@@ -24,44 +27,50 @@ const {
   enableTailscaleServe
 } = require('./mobile-access');
 const {
-  DEFAULT_DOCK_WIDTH,
-  DEFAULT_DOCK_HEIGHT,
+  DOCK_PANEL_WIDTH,
+  DOCK_WIDTH,
+  getDockHeight,
   getDockBounds,
   isHotspotHit,
   normalizeActiveWindowBounds,
-  shouldSuppressAutomaticReveal
+  shouldHideForFullscreen
 } = require('./dock-helpers');
-const { DockTransitionTracker, createDismissalController } = require('./dock-state');
+const { DockTransitionTracker } = require('./dock-state');
 
 const CURSOR_POLL_MS = 50;
-const DISMISS_DELAY_MS = 250;
-const TRANSITION_FALLBACK_MS = 500;
+const TRANSITION_FALLBACK_MS = 450;
+const FULLSCREEN_POLL_MS = 400;
 
 let window;
+let settingsWindow;
 let tray;
 let client;
+let cursorClient;
+let claudeClient;
+let antigravityClient;
 let pollTimer;
 let cursorTimer;
+let fullscreenTimer;
 let transitionFallback;
 let settings;
 let activeDisplayId = null;
 let hotspotWasActive = false;
 let activationPending = false;
-let awaitingPointerEntry = false;
 let isQuitting = false;
 let lastRateLimitSnapshot = null;
+let lastCodexState = null;
+let lastCursorState = null;
+let lastClaudeState = null;
+let lastAntigravityState = null;
 let getWindowsModulePromise;
 let mobileAccessWindow;
 let mobileServer;
 let mobileToken;
 let mobileEndpoint = null;
 let lastMobileSnapshot = null;
+let hiddenForFullscreen = false;
 
 const dock = new DockTransitionTracker();
-const dismissal = createDismissalController({
-  delay: DISMISS_DELAY_MS,
-  onDismiss: () => hideDock()
-});
 
 function settingsPath() {
   return path.join(app.getPath('userData'), 'settings.json');
@@ -167,7 +176,7 @@ async function getMobilePairing() {
       errorCorrectionLevel: 'M',
       margin: 1,
       width: 320,
-      color: { dark: '#080a0eff', light: '#f6f7f9ff' }
+      color: { dark: '#000000ff', light: '#ffffffff' }
     })
   };
 }
@@ -184,7 +193,7 @@ function openMobilePairing() {
     minWidth: 400,
     minHeight: 560,
     title: 'Throttle · iPhone Widget',
-    backgroundColor: '#080a0e',
+    backgroundColor: '#000000',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -204,13 +213,8 @@ function getDisplayById(id) {
   return screen.getAllDisplays().find(display => display.id === id);
 }
 
-function displayAtCursor() {
-  return screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-}
-
-function sendDockState(state, generation) {
-  if (!window || window.isDestroyed()) return;
-  window.webContents.send('dock-state', { state, generation });
+function dockDisplay() {
+  return getDisplayById(activeDisplayId) || screen.getPrimaryDisplay();
 }
 
 function enforceAlwaysOnTop() {
@@ -218,10 +222,24 @@ function enforceAlwaysOnTop() {
   window.setAlwaysOnTop(true, 'pop-up-menu');
 }
 
-function positionOnDisplay(display) {
+function applyDockBounds(display = dockDisplay()) {
   if (!window || window.isDestroyed() || !display) return;
   activeDisplayId = display.id;
-  window.setBounds(getDockBounds(display), false);
+  const bounds = getDockBounds(display, visibleProviderIds(settings).length);
+  const [, currentHeight] = window.getSize();
+  if (bounds.height > currentHeight) {
+    window.setMaximumSize(bounds.width, bounds.height);
+    window.setMinimumSize(bounds.width, bounds.height);
+  } else {
+    window.setMinimumSize(bounds.width, bounds.height);
+    window.setMaximumSize(bounds.width, bounds.height);
+  }
+  window.setBounds(bounds, false);
+}
+
+function sendDockState(state, generation) {
+  if (!window || window.isDestroyed()) return;
+  window.webContents.send('dock-state', { state, generation });
 }
 
 function finalizeTransition(finalState, generation) {
@@ -237,15 +255,17 @@ function finalizeTransition(finalState, generation) {
 
 function beginTransitionFallback(finalState, generation) {
   clearTimeout(transitionFallback);
-  transitionFallback = setTimeout(() => finalizeTransition(finalState, generation), TRANSITION_FALLBACK_MS);
+  transitionFallback = setTimeout(
+    () => finalizeTransition(finalState, generation),
+    TRANSITION_FALLBACK_MS
+  );
 }
 
-function showDock(display = displayAtCursor(), { waitForPointer = false } = {}) {
+function showDock(display = dockDisplay(), { bypassFullscreen = false } = {}) {
   if (!window || window.isDestroyed() || !display) return;
-  dismissal.cancel();
-  awaitingPointerEntry = waitForPointer;
+  if (hiddenForFullscreen && !bypassFullscreen) return;
   clearTimeout(transitionFallback);
-  positionOnDisplay(display);
+  applyDockBounds(display);
   window.setIgnoreMouseEvents(false);
   window.showInactive();
   enforceAlwaysOnTop();
@@ -254,21 +274,50 @@ function showDock(display = displayAtCursor(), { waitForPointer = false } = {}) 
   beginTransitionFallback('visible', generation);
 }
 
-function hideDock() {
+function hideDock({ forFullscreen = false } = {}) {
   if (!window || window.isDestroyed() || dock.state === 'hidden' || dock.state === 'hiding') return;
-  dismissal.cancel();
+  if (forFullscreen) hiddenForFullscreen = true;
   const generation = dock.begin('hiding');
   sendDockState('hiding', generation);
   beginTransitionFallback('hidden', generation);
 }
 
-function pointInWindow(point) {
+function pointInDockZone(point) {
   if (!window || window.isDestroyed()) return false;
   const bounds = window.getBounds();
-  return point.x >= bounds.x &&
+  const panelLeft = bounds.x + bounds.width - DOCK_PANEL_WIDTH;
+  return point.x >= panelLeft &&
     point.x < bounds.x + bounds.width &&
     point.y >= bounds.y &&
     point.y < bounds.y + bounds.height;
+}
+
+function sendToWindows(channel, payload) {
+  if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
+  if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.webContents.send(channel, payload);
+}
+
+function snapshot() {
+  return {
+    settings: {
+      opacity: settings.opacity,
+      refreshSeconds: settings.refreshSeconds,
+      showClaude: settings.showClaude,
+      showCursor: settings.showCursor,
+      showCodex: settings.showCodex,
+      showAntigravity: settings.showAntigravity
+    },
+    providers: {
+      claude: lastClaudeState,
+      cursor: lastCursorState,
+      codex: lastCodexState,
+      antigravity: lastAntigravityState
+    }
+  };
+}
+
+function sendSnapshot() {
+  sendToWindows('usage-state', snapshot());
 }
 
 async function getActiveWindow() {
@@ -283,7 +332,7 @@ async function getActiveWindow() {
 }
 
 async function tryHotspotReveal(display) {
-  if (activationPending || dock.state !== 'hidden') return;
+  if (activationPending || hiddenForFullscreen || dock.state !== 'hidden') return;
   activationPending = true;
   const checkingGeneration = dock.begin('checking');
   try {
@@ -291,17 +340,20 @@ async function tryHotspotReveal(display) {
     const point = screen.getCursorScreenPoint();
     const currentDisplay = screen.getDisplayNearestPoint(point);
     const stillInHotspot = currentDisplay.id === display.id &&
-      isHotspotHit(point, currentDisplay, screen.getAllDisplays());
+      isHotspotHit(
+        point,
+        currentDisplay,
+        screen.getAllDisplays(),
+        getDockHeight(visibleProviderIds(settings).length)
+      );
     const stillChecking = dock.state === 'checking' && dock.generation === checkingGeneration;
     if (stillChecking && stillInHotspot &&
-      !shouldSuppressAutomaticReveal(activeWindow, currentDisplay)) {
+      !shouldHideForFullscreen(activeWindow, currentDisplay)) {
       showDock(currentDisplay);
     } else if (stillChecking) {
       dock.state = 'hidden';
     }
   } catch (error) {
-    // Fail closed for automatic activation. The tray remains an explicit way
-    // to show the dock if foreground-window detection is unavailable.
     console.warn('Throttle could not inspect the foreground window:', error);
     if (dock.state === 'checking' && dock.generation === checkingGeneration) {
       dock.state = 'hidden';
@@ -316,49 +368,71 @@ function monitorCursor() {
   const point = screen.getCursorScreenPoint();
   const displays = screen.getAllDisplays();
   const display = screen.getDisplayNearestPoint(point);
-  const inHotspot = isHotspotHit(point, display, displays);
+  const inHotspot = isHotspotHit(
+    point,
+    display,
+    displays,
+    getDockHeight(visibleProviderIds(settings).length)
+  );
 
   if (dock.state === 'hidden' && inHotspot && !hotspotWasActive) {
     void tryHotspotReveal(display);
   }
 
   if (dock.state === 'showing' || dock.state === 'visible') {
-    if (pointInWindow(point)) {
-      awaitingPointerEntry = false;
-      dismissal.cancel();
-    } else if (!awaitingPointerEntry) {
-      dismissal.schedule();
-    }
-  } else if (dock.state === 'hiding' && pointInWindow(point)) {
+    if (!pointInDockZone(point)) hideDock();
+  } else if (dock.state === 'hiding' && pointInDockZone(point) && !hiddenForFullscreen) {
     showDock(getDisplayById(activeDisplayId) || display);
   }
 
   hotspotWasActive = inHotspot;
 }
 
+async function monitorFullscreen() {
+  if (!window || window.isDestroyed()) return;
+  const display = dockDisplay();
+  try {
+    const activeWindow = await getActiveWindow();
+    const hide = shouldHideForFullscreen(activeWindow, display);
+    if (hide) {
+      hiddenForFullscreen = true;
+      hideDock({ forFullscreen: true });
+    } else if (hiddenForFullscreen) {
+      hiddenForFullscreen = false;
+      hotspotWasActive = false;
+    }
+  } catch (error) {
+    console.warn('Throttle could not inspect the foreground window:', error);
+  }
+}
+
 function handleDisplayChange() {
   if (!window || window.isDestroyed()) return;
   const current = getDisplayById(activeDisplayId);
-  if (current) {
-    positionOnDisplay(current);
-    return;
-  }
-  if (dock.state !== 'hidden') hideDock();
-  positionOnDisplay(screen.getPrimaryDisplay());
+  applyDockBounds(current || screen.getPrimaryDisplay());
+}
+
+function webPreferences() {
+  return {
+    preload: path.join(__dirname, 'preload.js'),
+    contextIsolation: true,
+    nodeIntegration: false,
+    sandbox: false
+  };
 }
 
 function createWindow() {
   settings = loadSettings();
   const primaryDisplay = screen.getPrimaryDisplay();
-  const initialBounds = getDockBounds(primaryDisplay);
+  const initialBounds = getDockBounds(primaryDisplay, visibleProviderIds(settings).length);
   window = new BrowserWindow({
     title: 'Throttle',
     icon: path.join(__dirname, '..', 'assets', 'throttle.png'),
     ...initialBounds,
-    minWidth: DEFAULT_DOCK_WIDTH,
-    minHeight: DEFAULT_DOCK_HEIGHT,
-    maxWidth: DEFAULT_DOCK_WIDTH,
-    maxHeight: DEFAULT_DOCK_HEIGHT,
+    minWidth: DOCK_WIDTH,
+    minHeight: initialBounds.height,
+    maxWidth: DOCK_WIDTH,
+    maxHeight: initialBounds.height,
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
@@ -372,11 +446,7 @@ function createWindow() {
     skipTaskbar: true,
     opacity: settings.opacity,
     show: false,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
+    webPreferences: webPreferences()
   });
   activeDisplayId = primaryDisplay.id;
   enforceAlwaysOnTop();
@@ -386,7 +456,6 @@ function createWindow() {
   window.on('close', event => {
     if (isQuitting) return;
     event.preventDefault();
-    hideDock();
   });
   window.on('closed', () => {
     window = null;
@@ -394,13 +463,14 @@ function createWindow() {
 
   window.loadFile(path.join(__dirname, 'index.html'));
   window.once('ready-to-show', () => {
+    const screenshotArg = process.argv.find(arg => arg.startsWith('--screenshot='));
+    const verifyArg = process.argv.find(arg => arg.startsWith('--verify-state='));
     window.showInactive();
     window.setIgnoreMouseEvents(true);
     sendDockState('hidden', dock.generation);
-
-    const screenshotArg = process.argv.find(arg => arg.startsWith('--screenshot='));
-    const verifyArg = process.argv.find(arg => arg.startsWith('--verify-state='));
-    if (screenshotArg || verifyArg) showDock(primaryDisplay, { waitForPointer: true });
+    if (screenshotArg || verifyArg) {
+      showDock(primaryDisplay, { bypassFullscreen: true });
+    }
 
     if (verifyArg) {
       const outputPath = verifyArg.slice('--verify-state='.length);
@@ -446,12 +516,35 @@ function createWindow() {
   });
 }
 
+function openSettings() {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.show();
+    settingsWindow.focus();
+    return true;
+  }
+  settingsWindow = new BrowserWindow({
+    width: 440,
+    height: 640,
+    minWidth: 400,
+    minHeight: 600,
+    title: 'Throttle',
+    icon: path.join(__dirname, '..', 'assets', 'throttle.png'),
+    backgroundColor: '#000000',
+    autoHideMenuBar: true,
+    webPreferences: webPreferences()
+  });
+  settingsWindow.loadFile(path.join(__dirname, 'settings.html'));
+  settingsWindow.on('closed', () => {
+    settingsWindow = null;
+  });
+  return true;
+}
+
 function createTray() {
   tray = new Tray(path.join(__dirname, '..', 'assets', 'throttle.ico'));
-  tray.setToolTip('Throttle · Codex usage');
+  updateTrayTooltip();
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Show Throttle', click: () => showDock(displayAtCursor(), { waitForPointer: true }) },
-    { label: 'Hide Throttle', click: hideDock },
+    { label: 'Settings', click: openSettings },
     { type: 'separator' },
     { label: 'Refresh Usage', click: () => void refreshUsage() },
     { label: 'Check for Updates', click: () => void checkForUpdate().catch(() => {}) },
@@ -464,15 +557,18 @@ function createTray() {
       }
     }
   ]));
-  tray.on('click', () => showDock(displayAtCursor(), { waitForPointer: true }));
+  tray.on('click', openSettings);
 }
 
-function sendState(state) {
-  if (window && !window.isDestroyed()) window.webContents.send('usage-state', state);
+function cacheProvider(provider, state) {
+  if (provider === 'cursor') lastCursorState = state;
+  else if (provider === 'claude') lastClaudeState = state;
+  else if (provider === 'antigravity') lastAntigravityState = state;
+  else lastCodexState = state;
+  sendSnapshot();
 }
 
-async function refreshUsage() {
-  sendState({ status: 'refreshing' });
+async function refreshCodexUsage() {
   try {
     if (!client) {
       client = new CodexClient();
@@ -481,11 +577,7 @@ async function refreshUsage() {
         const data = normalizeRateLimits({ rateLimits: lastRateLimitSnapshot });
         const updatedAt = Date.now();
         updateMobileSnapshot(data, updatedAt);
-        sendState({
-          status: 'connected',
-          data,
-          updatedAt
-        });
+        cacheProvider('codex', { status: 'connected', data, updatedAt });
       });
     }
     const raw = await client.getRateLimits();
@@ -493,11 +585,11 @@ async function refreshUsage() {
     const data = normalizeRateLimits(raw);
     const updatedAt = Date.now();
     updateMobileSnapshot(data, updatedAt);
-    sendState({ status: 'connected', data, updatedAt });
+    cacheProvider('codex', { status: 'connected', data, updatedAt });
   } catch (error) {
     const message = String(error?.message || error);
     const needsLogin = /unauthorized|login|not logged|not found|ENOENT/i.test(message);
-    sendState({
+    cacheProvider('codex', {
       status: needsLogin ? 'disconnected' : 'error',
       error: message,
       updatedAt: Date.now()
@@ -505,23 +597,121 @@ async function refreshUsage() {
   }
 }
 
-function schedulePolling() {
-  clearInterval(pollTimer);
-  pollTimer = setInterval(refreshUsage, settings.refreshSeconds * 1000);
+async function refreshCursorUsage() {
+  try {
+    cursorClient ||= new CursorClient();
+    const data = await cursorClient.getUsage();
+    cacheProvider('cursor', { status: 'connected', data, updatedAt: Date.now() });
+  } catch (error) {
+    const message = String(error?.message || error);
+    const needsLogin = /unauthorized|unauthenticated|login|not found|ENOENT/i.test(message);
+    cacheProvider('cursor', {
+      status: needsLogin ? 'disconnected' : 'error',
+      error: message,
+      updatedAt: Date.now()
+    });
+  }
 }
 
-function openLogin() {
+async function refreshClaudeUsage() {
+  try {
+    claudeClient ||= new ClaudeClient();
+    const data = await claudeClient.getUsage();
+    cacheProvider('claude', { status: 'connected', data, updatedAt: Date.now() });
+  } catch (error) {
+    const message = String(error?.message || error);
+    const needsLogin = /unauthorized|unauthenticated|login|not found|ENOENT/i.test(message);
+    cacheProvider('claude', {
+      status: needsLogin ? 'disconnected' : 'error',
+      error: message,
+      updatedAt: Date.now()
+    });
+  }
+}
+
+async function refreshAntigravityUsage() {
+  try {
+    antigravityClient ||= new AntigravityClient();
+    const data = await antigravityClient.getUsage();
+    cacheProvider('antigravity', { status: 'connected', data, updatedAt: Date.now() });
+  } catch (error) {
+    const message = String(error?.message || error);
+    const needsLogin = /credential|logged in|login|unauthorized|not found|ENOENT/i.test(message);
+    cacheProvider('antigravity', {
+      status: needsLogin ? 'disconnected' : 'error',
+      error: message,
+      updatedAt: Date.now()
+    });
+  }
+}
+
+async function refreshUsage() {
+  const jobs = [];
+  if (settings.showCodex) jobs.push(refreshCodexUsage());
+  else lastCodexState = null;
+  if (settings.showCursor) jobs.push(refreshCursorUsage());
+  else lastCursorState = null;
+  if (settings.showClaude) jobs.push(refreshClaudeUsage());
+  else lastClaudeState = null;
+  if (settings.showAntigravity) jobs.push(refreshAntigravityUsage());
+  else lastAntigravityState = null;
+  sendSnapshot();
+  await Promise.all(jobs);
+}
+
+function updateTrayTooltip() {
+  const names = visibleProviderIds(settings).map(id => id[0].toUpperCase() + id.slice(1));
+  tray?.setToolTip(names.length ? `Throttle · ${names.join(', ')}` : 'Throttle');
+}
+
+function openCursor() {
+  if (process.platform === 'win32') {
+    const localAppData = process.env.LOCALAPPDATA || '';
+    const candidates = [
+      path.join(localAppData, 'Programs', 'cursor', 'Cursor.exe'),
+      path.join(localAppData, 'Programs', 'Cursor', 'Cursor.exe'),
+      path.join(localAppData, 'cursor', 'Cursor.exe')
+    ];
+    for (const exe of candidates) {
+      if (!exe || !fs.existsSync(exe)) continue;
+      const child = spawn(exe, { detached: true, stdio: 'ignore', windowsHide: false });
+      child.unref();
+      return true;
+    }
+  }
+  void shell.openExternal('cursor://');
+  return true;
+}
+
+function openCliLogin(title, command) {
   if (process.platform === 'win32') {
     const child = spawn(
       'cmd.exe',
-      ['/c', 'start', 'Codex Login', 'cmd.exe', '/k', 'codex login'],
+      ['/c', 'start', title, 'cmd.exe', '/k', command],
       { detached: true, stdio: 'ignore', windowsHide: false }
     );
     child.unref();
   } else {
-    void shell.openExternal('https://chatgpt.com/auth/login');
+    const loginUrl = command === 'agy'
+      ? 'https://antigravity.google/docs/cli/install/'
+      : command.startsWith('claude')
+        ? 'https://claude.ai/login'
+        : 'https://chatgpt.com/auth/login';
+    void shell.openExternal(loginUrl);
   }
   return true;
+}
+
+function openLogin(provider) {
+  if (provider === 'cursor') return openCursor();
+  if (provider === 'claude') return openCliLogin('Claude Login', 'claude auth login');
+  if (provider === 'antigravity') return openCliLogin('Antigravity', 'agy');
+  return openCliLogin('Codex Login', 'codex login');
+}
+
+function schedulePolling() {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(refreshUsage, settings.refreshSeconds * 1000);
 }
 
 async function checkForUpdate() {
@@ -548,25 +738,39 @@ async function checkForUpdate() {
 }
 
 ipcMain.handle('get-settings', () => settings);
+ipcMain.handle('open-settings', () => openSettings());
 ipcMain.handle('refresh-usage', refreshUsage);
 ipcMain.handle('set-opacity', (_event, value) => {
   settings = sanitizeSettings({ ...settings, opacity: value });
   window?.setOpacity(settings.opacity);
   saveSettings();
-  return settings;
-});
-ipcMain.handle('set-grid-opacity', (_event, value) => {
-  settings = sanitizeSettings({ ...settings, gridOpacity: value });
-  saveSettings();
+  sendSnapshot();
   return settings;
 });
 ipcMain.handle('set-refresh-seconds', (_event, value) => {
   settings = sanitizeSettings({ ...settings, refreshSeconds: value });
   saveSettings();
   schedulePolling();
+  sendSnapshot();
   return settings;
 });
-ipcMain.handle('open-login', openLogin);
+ipcMain.handle('set-show-provider', (_event, id, enabled) => {
+  const key = {
+    claude: 'showClaude',
+    cursor: 'showCursor',
+    codex: 'showCodex',
+    antigravity: 'showAntigravity'
+  }[id];
+  if (!key) return settings;
+  settings = sanitizeSettings({ ...settings, [key]: Boolean(enabled) });
+  saveSettings();
+  updateTrayTooltip();
+  applyDockBounds();
+  sendSnapshot();
+  void refreshUsage();
+  return settings;
+});
+ipcMain.handle('open-login', (_event, provider) => openLogin(provider));
 ipcMain.handle('check-for-update', checkForUpdate);
 ipcMain.handle('open-mobile-pairing', openMobilePairing);
 ipcMain.handle('get-mobile-access-status', getMobileAccessStatus);
@@ -575,17 +779,21 @@ ipcMain.handle('get-mobile-pairing', getMobilePairing);
 ipcMain.on('dock-transition-complete', (_event, payload = {}) => {
   finalizeTransition(payload.finalState, payload.generation);
 });
-ipcMain.on('hide-dock', hideDock);
-ipcMain.on('close', hideDock);
 
 app.whenReady().then(() => {
+  const automationMode = process.argv.some(arg =>
+    arg.startsWith('--screenshot=') || arg.startsWith('--verify-state=')
+  );
   createWindow();
   createTray();
   startMobileServer().catch(error => {
     console.warn('Throttle mobile server could not start:', error.message);
   });
   schedulePolling();
-  cursorTimer = setInterval(monitorCursor, CURSOR_POLL_MS);
+  if (!automationMode) {
+    cursorTimer = setInterval(monitorCursor, CURSOR_POLL_MS);
+    fullscreenTimer = setInterval(() => void monitorFullscreen(), FULLSCREEN_POLL_MS);
+  }
   screen.on('display-added', handleDisplayChange);
   screen.on('display-removed', handleDisplayChange);
   screen.on('display-metrics-changed', handleDisplayChange);
@@ -593,17 +801,18 @@ app.whenReady().then(() => {
 });
 
 app.on('activate', () => {
-  if (window && !window.isDestroyed()) showDock(displayAtCursor(), { waitForPointer: true });
+  if (window && !window.isDestroyed()) showDock();
 });
 app.on('window-all-closed', () => {});
 app.on('before-quit', () => {
   isQuitting = true;
   clearInterval(pollTimer);
   clearInterval(cursorTimer);
+  clearInterval(fullscreenTimer);
   clearTimeout(transitionFallback);
-  dismissal.cancel();
   client?.stop();
   void mobileServer?.stop();
   mobileAccessWindow?.destroy();
+  settingsWindow?.destroy();
   tray?.destroy();
 });

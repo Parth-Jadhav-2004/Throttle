@@ -1,97 +1,166 @@
 const $ = id => document.getElementById(id);
-const CIRCUMFERENCE = 2 * Math.PI * 36;
-let lastState = null;
+const CIRCUMFERENCE = 2 * Math.PI * 27;
+const PROVIDERS = ['claude', 'cursor', 'codex', 'antigravity'];
+const CONNECT_LABELS = {
+  claude: 'Connect Claude',
+  cursor: 'Open Cursor',
+  codex: 'Connect Codex',
+  antigravity: 'Open Antigravity CLI'
+};
+const { PROVIDER_TITLES, usageColor, formatResetLabel, limitsForProvider } = window.usageUi || {
+  PROVIDER_TITLES: {
+    claude: 'Claude Usage',
+    cursor: 'Cursor Usage',
+    codex: 'Codex Usage',
+    antigravity: 'Antigravity Usage'
+  },
+  usageColor: () => '#ffffff',
+  formatResetLabel: () => '',
+  limitsForProvider: () => []
+};
+
 let currentDockState = 'hidden';
 let currentDockGeneration = 0;
+let currentSnapshot = { settings: {}, providers: {} };
+let hoveredProvider = null;
+let tooltipTimer = null;
 
-function formatReset(epoch) {
-  if (!epoch) return 'Reset unknown';
-  const seconds = Math.max(0, epoch - Date.now() / 1000);
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (days) return `Resets in ${days}d ${hours}h`;
-  if (hours) return `Resets in ${hours}h ${minutes}m`;
-  return `Resets in ${minutes}m`;
+function settingKey(id) {
+  return `show${id[0].toUpperCase()}${id.slice(1)}`;
 }
 
-function renderLimit(prefix, data) {
-  const value = $(`${prefix}-value`);
-  const left = $(`${prefix}-left`);
-  const ring = $(`${prefix}-ring`);
-  if (!data) {
-    value.textContent = 'N/A';
-    value.style.color = '#898d96';
-    left.textContent = '';
-    ring.style.strokeDashoffset = String(CIRCUMFERENCE);
-    ring.style.opacity = '0';
-    $(`${prefix}-reset`).textContent = 'Not reported';
+function usedPercent(provider, state) {
+  const data = state?.data;
+  if (!data) return null;
+  if (provider === 'antigravity') return finitePercent(data.usedPercent);
+  if (provider === 'cursor') return finitePercent(data.included?.usedPercent);
+  if (provider === 'claude') return maxPercent(data.fiveHour?.usedPercent, data.weekly?.usedPercent);
+  if (data.isFree) return finitePercent(data.monthly?.usedPercent);
+  return maxPercent(data.fiveHour?.usedPercent, data.weekly?.usedPercent, data.monthly?.usedPercent);
+}
+
+function finitePercent(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : null;
+}
+
+function maxPercent(...values) {
+  const percents = values.map(finitePercent).filter(value => value != null);
+  return percents.length ? Math.max(...percents) : null;
+}
+
+function providerIconMarkup(id) {
+  const slot = $(`slot-${id}`);
+  const logo = slot?.querySelector('.logo');
+  if (!logo) return '';
+  return logo.innerHTML.trim();
+}
+
+function renderTooltip(provider) {
+  const tooltip = $('tooltip');
+  const rowsHost = $('tooltip-rows');
+  const state = currentSnapshot.providers?.[provider];
+  const data = state?.status === 'connected' ? state.data : null;
+  const rows = limitsForProvider(provider, data);
+
+  if (!rows.length || document.body.dataset.dockState === 'hidden' || document.body.dataset.dockState === 'hiding') {
+    hideTooltip();
     return;
   }
-  const remaining = Math.max(0, Math.min(100, data.remainingPercent));
-  value.textContent = `${Math.round(remaining)}%`;
-  value.style.color = '';
-  left.textContent = 'left';
-  ring.style.opacity = '1';
-  ring.style.strokeDashoffset = String(CIRCUMFERENCE * (1 - remaining / 100));
-  $(`${prefix}-reset`).textContent = formatReset(data.resetsAt);
-}
 
-function applyLimitVisibility(data) {
-  const free = Boolean(data && data.isFree);
-  $('tile-five').hidden = free;
-  $('tile-week').hidden = free;
-  $('tile-month').hidden = !free;
-  $('usage-grid').classList.toggle('single-limit', free);
-}
+  $('tooltip-title').textContent = PROVIDER_TITLES[provider] || 'Usage';
+  $('tooltip-icon').innerHTML = providerIconMarkup(provider);
+  rowsHost.replaceChildren();
 
-function setConnection(status, text) {
-  const dot = $('status-dot');
-  dot.className = 'status-dot';
-  if (status === 'connected') dot.classList.add('connected');
-  if (status === 'disconnected' || status === 'error') dot.classList.add('error');
-  $('status').textContent = text;
-}
+  for (const row of rows) {
+    const item = document.createElement('div');
+    item.className = `usage-tooltip-row${row.primary ? ' is-primary' : ''}`;
 
-function render(state) {
-  lastState = { ...(lastState || {}), ...state };
-  $('refresh').classList.toggle('spinning', state.status === 'refreshing');
+    const meta = document.createElement('div');
+    meta.className = 'usage-tooltip-meta';
+    meta.innerHTML = `<span>${row.label}</span><span>${formatResetLabel(row.resetsAt)}</span>`;
 
-  if (state.status === 'refreshing') {
-    setConnection('refreshing', lastState.data ? 'Refreshing usage…' : 'Connecting to Codex…');
+    const bar = document.createElement('div');
+    bar.className = 'usage-tooltip-bar';
+    const fill = document.createElement('span');
+    const color = usageColor(row.usedPercent);
+    fill.style.width = `${Math.round(row.usedPercent)}%`;
+    fill.style.backgroundColor = color;
+    bar.appendChild(fill);
+
+    const value = document.createElement('div');
+    value.className = 'usage-tooltip-value';
+    value.textContent = `${Math.round(row.usedPercent)}% Used`;
+
+    item.append(meta, bar, value);
+    rowsHost.appendChild(item);
   }
-  if (state.status === 'connected' && state.data) {
-    setConnection('connected', 'Live · local Codex connection');
-    $('connect').hidden = true;
-    applyLimitVisibility(state.data);
-    renderLimit('five', state.data.fiveHour);
-    renderLimit('week', state.data.weekly);
-    renderLimit('month', state.data.monthly);
-    $('plan').textContent = `${(state.data.planType || 'unknown').toUpperCase()} PLAN · LOCAL`;
-    $('updated').textContent = `Updated ${new Date(state.updatedAt).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit'
-    })}`;
-  }
-  if (state.status === 'disconnected' || state.status === 'error') {
-    setConnection(
-      state.status,
-      state.status === 'disconnected' ? 'Codex login required' : 'Unable to read usage'
-    );
-    $('connect').hidden = false;
-    $('updated').textContent = 'Not updated';
-  }
+
+  const slot = $(`slot-${provider}`);
+  const slotRect = slot.getBoundingClientRect();
+  const tooltipWidth = 268;
+  const left = Math.max(12, slotRect.left - tooltipWidth - 18);
+  const top = Math.max(12, slotRect.top + slotRect.height / 2 - 72);
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
+  tooltip.style.setProperty('--tooltip-tail-y', `${Math.max(18, slotRect.top + slotRect.height / 2 - top - 7)}px`);
+  tooltip.hidden = false;
+  tooltip.setAttribute('aria-hidden', 'false');
+  tooltip.classList.add('is-visible');
 }
 
-function applyPanelOpacity(value) {
-  document.documentElement.style.setProperty('--panel-opacity', String(value));
+function hideTooltip() {
+  clearTimeout(tooltipTimer);
+  hoveredProvider = null;
+  const tooltip = $('tooltip');
+  tooltip.classList.remove('is-visible');
+  tooltip.hidden = true;
+  tooltip.setAttribute('aria-hidden', 'true');
 }
 
-function setSettingsView(open) {
-  const island = $('island');
-  island.dataset.view = open ? 'settings' : 'usage';
-  $('settings').setAttribute('aria-label', open ? 'Back to usage' : 'Open settings');
-  $('settings').title = open ? 'Back to usage' : 'Settings';
+function scheduleTooltip(provider) {
+  clearTimeout(tooltipTimer);
+  tooltipTimer = setTimeout(() => {
+    if (hoveredProvider === provider) renderTooltip(provider);
+  }, 120);
+}
+
+function renderSlot(id, state) {
+  const slot = $(`slot-${id}`);
+  const ring = $(`${id}-ring`);
+  const label = $(`${id}-pct`);
+  const status = state?.status;
+  const used = status === 'connected' ? usedPercent(id, state) : null;
+  const actionable = status === 'disconnected' || status === 'error';
+
+  slot.classList.toggle('is-actionable', true);
+  slot.classList.toggle('is-empty', used == null);
+  slot.classList.toggle('is-error', status === 'disconnected' || status === 'error');
+  slot.title = actionable ? CONNECT_LABELS[id] : 'Refresh usage';
+
+  if (used == null) {
+    label.textContent = '—';
+    ring.style.strokeDashoffset = String(CIRCUMFERENCE);
+    ring.style.stroke = '#ffffff';
+    return;
+  }
+
+  const color = usageColor(used);
+  label.textContent = `${Math.round(used)}%`;
+  label.style.color = color;
+  ring.style.stroke = color;
+  ring.style.strokeDashoffset = String(CIRCUMFERENCE * (1 - used / 100));
+}
+
+function render(snapshot = {}) {
+  currentSnapshot = snapshot;
+  const settings = snapshot.settings || {};
+  const providers = snapshot.providers || {};
+  for (const id of PROVIDERS) {
+    $(`slot-${id}`).hidden = settings[settingKey(id)] === false;
+    renderSlot(id, providers[id]);
+  }
+  if (hoveredProvider) renderTooltip(hoveredProvider);
 }
 
 window.widget.onUsageState(render);
@@ -99,24 +168,12 @@ window.widget.onDockState(({ state, generation }) => {
   currentDockState = state;
   currentDockGeneration = generation;
   document.body.dataset.dockState = state;
-  if (state === 'hiding') setSettingsView(false);
+  if (state === 'hidden' || state === 'hiding') hideTooltip();
 });
+window.widget.getSettings().then(settings => render({ settings, providers: {} }));
 
-window.widget.getSettings().then(settings => {
-  const opacityPercent = Math.round(settings.opacity * 100);
-  const gridPercent = Math.round(settings.gridOpacity * 100);
-  $('opacity').value = opacityPercent;
-  $('opacity-value').value = `${opacityPercent}%`;
-  $('grid-opacity').value = gridPercent;
-  $('grid-opacity-value').value = `${gridPercent}%`;
-  $('interval').value = String(settings.refreshSeconds);
-  applyPanelOpacity(settings.gridOpacity);
-});
-
-$('island').addEventListener('transitionend', event => {
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const completionProperty = reducedMotion ? 'opacity' : 'transform';
-  if (event.target !== $('island') || event.propertyName !== completionProperty) return;
+document.querySelector('.dock-shell').addEventListener('transitionend', event => {
+  if (event.target !== event.currentTarget || event.propertyName !== 'transform') return;
   if (currentDockState === 'showing') {
     const generation = currentDockGeneration;
     currentDockState = 'visible';
@@ -130,50 +187,45 @@ $('island').addEventListener('transitionend', event => {
   }
 });
 
-$('opacity').addEventListener('input', event => {
-  $('opacity-value').value = `${event.target.value}%`;
-  window.widget.setOpacity(Number(event.target.value) / 100);
-});
-$('grid-opacity').addEventListener('input', event => {
-  const value = Number(event.target.value) / 100;
-  $('grid-opacity-value').value = `${event.target.value}%`;
-  applyPanelOpacity(value);
-  window.widget.setGridOpacity(value);
-});
-$('interval').addEventListener('change', event =>
-  window.widget.setRefreshSeconds(Number(event.target.value))
-);
-$('refresh').addEventListener('click', () => window.widget.refresh());
-$('connect').addEventListener('click', () => window.widget.connect());
-$('retract').addEventListener('click', () => window.widget.hideDock());
-$('settings').addEventListener('click', () =>
-  setSettingsView($('island').dataset.view !== 'settings')
-);
-$('update').addEventListener('click', async () => {
-  const button = $('update');
-  const status = $('settings-status');
-  button.disabled = true;
-  status.textContent = 'Checking for updates…';
-  try {
-    const result = await window.widget.checkForUpdate();
-    status.textContent = result.available
-      ? `Throttle ${result.latest} available · opening download`
-      : `Throttle ${result.current} is up to date`;
-  } catch {
-    status.textContent = 'Update check failed · try again later';
-  } finally {
-    button.disabled = false;
-  }
-});
-$('mobile-pairing').addEventListener('click', () => window.widget.openMobilePairing());
+for (const id of PROVIDERS) {
+  const slot = $(`slot-${id}`);
+  slot.addEventListener('click', async () => {
+    const state = currentSnapshot.providers?.[id];
+    if (state?.status === 'disconnected' || state?.status === 'error') {
+      window.widget.connect(id);
+      return;
+    }
+    if (slot.classList.contains('is-refreshing')) return;
+    slot.classList.add('is-refreshing');
+    try {
+      await window.widget.refresh();
+    } finally {
+      slot.classList.remove('is-refreshing');
+    }
+  });
+  slot.addEventListener('mouseenter', () => {
+    if (document.body.dataset.dockState === 'hidden' || document.body.dataset.dockState === 'hiding') return;
+    hoveredProvider = id;
+    scheduleTooltip(id);
+  });
+  slot.addEventListener('mouseleave', () => {
+    if (hoveredProvider === id) hideTooltip();
+  });
+  slot.addEventListener('focus', () => {
+    if (document.body.dataset.dockState === 'hidden' || document.body.dataset.dockState === 'hiding') return;
+    hoveredProvider = id;
+    scheduleTooltip(id);
+  });
+  slot.addEventListener('blur', () => {
+    if (hoveredProvider === id) hideTooltip();
+  });
+}
 
-window.addEventListener('keydown', event => {
-  if (event.key === 'Escape') window.widget.hideDock();
+$('open-settings').addEventListener('click', () => {
+  hideTooltip();
+  window.widget.openSettings();
 });
 
-setInterval(() => {
-  if (!lastState?.data) return;
-  renderLimit('five', lastState.data.fiveHour);
-  renderLimit('week', lastState.data.weekly);
-  renderLimit('month', lastState.data.monthly);
-}, 30000);
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') hideTooltip();
+});

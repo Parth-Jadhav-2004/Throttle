@@ -1,7 +1,7 @@
 {
   "name": "throttle",
-  "version": "0.1.4",
-  "description": "An always-on-top Windows widget for live Codex subscription usage limits.",
+  "version": "0.1.5",
+  "description": "An always-on-top Windows dock for live Claude, Cursor, Codex, and Antigravity usage limits.",
   "main": "src/main.js",
   "author": "Parth Jadhav",
   "license": "MIT",

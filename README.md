@@ -1,28 +1,36 @@
 # Throttle
 
-A focused, auto-hiding Windows usage island for monitoring the **Codex allowance included with a ChatGPT plan**.
+A focused, always-on-top Windows dock for monitoring **Claude Code**, **Cursor**, **Codex**, and **Google Antigravity CLI** usage.
 
 [Download the latest Windows release](https://github.com/Parth-Jadhav-2004/Throttle/releases/latest)
 
 ## What it tracks
 
+- Claude Code 5-hour and weekly utilization, from the local Claude session
+- Cursor included-usage percentage, from the local Cursor IDE session
 - Monthly Codex limit for free ChatGPT accounts
-- 5-hour Codex limit, when the account reports that window
-- Weekly Codex limit, when the account reports that window
-- Remaining percentage and reset countdown
-- ChatGPT plan type reported by Codex
+- 5-hour and weekly Codex limits, when the account reports those windows
+- Antigravity model quota, from the local `agy` CLI session
+
+Each visible service shows a logo, a ring for how much of that allowance is used, and the used percentage underneath. A small tab remains on the right edge; touch that edge to reveal the panel, then move away to retract it. Open **Settings** from the tray to turn Claude, Cursor, Codex, or Antigravity on or off.
 
 Throttle uses the official local `codex app-server` protocol and its `account/rateLimits/read` method. It does **not** scrape ChatGPT, copy browser cookies, or ask for an API key.
 
-> Important: this tracks Codex rate-limit windows attached to your ChatGPT subscription. It cannot track every general ChatGPT model/message cap because OpenAI does not expose those caps through this Codex method.
+Claude usage is read from the local Claude Code session in `~/.claude/.credentials.json` and requested from Anthropic's usage endpoint. Cursor usage reads the local Cursor IDE session from `state.vscdb` and asks Cursor's dashboard API for the current billing-cycle limits. Antigravity quota is read through the local `agy` credential and the same Cloud Code quota flow used by its `/usage` panel. Throttle does **not** copy those sessions into its own settings.
+
+> Important: Codex tracking covers rate-limit windows attached to your ChatGPT subscription. It cannot track every general ChatGPT model/message cap because OpenAI does not expose those caps through this Codex method.
 
 ## Run
 
-1. Install the Codex CLI and sign in with ChatGPT:
+1. Sign in to the tools you want to watch:
 
    ```text
+   agy
+   claude auth login
    codex login
    ```
+
+   Cursor must already be signed in on this computer.
 
 2. From this folder:
 
@@ -31,18 +39,16 @@ Throttle uses the official local `codex app-server` protocol and its `account/ra
    npm start
    ```
 
-3. Move the cursor to the exact top-center edge of a display to reveal the usage island.
+Throttle retracts into the right edge of the display and reveals from the centered edge hotspot. It is also available from the Windows notification area. It does not add itself to Windows startup.
 
-Throttle starts hidden and remains available from the Windows notification area. It does not add itself to Windows startup.
-
-If no account is connected, reveal the island and click **Connect Codex**. A terminal opens and starts the official `codex login` flow.
+If a service is disconnected, click its logo on the dock to start the matching login flow. Open **Settings** from the tray to hide any service you do not want on the dock.
 
 ## Windows builds
 
 Run `npm run dist` to create:
 
-- `dist/portable/Throttle-0.1.4-x64-Portable.exe` — portable executable
-- `dist/installer/Throttle-0.1.4-x64-Setup.exe` — Windows installer
+- `dist/portable/Throttle-0.1.5-x64-Portable.exe` — portable executable
+- `dist/installer/Throttle-0.1.5-x64-Setup.exe` — Windows installer
 
 ## iPhone app and widgets
 
@@ -68,55 +74,55 @@ development and sideloading.
 
 ## Controls
 
-- Touch the center 240 pixels of a monitor's exact top edge to reveal the fixed `420 × 220` usage island
-- The island follows the cursor's monitor and ignores internal edges between vertically stacked displays
-- Move outside the island to retract it after a short grace period; returning to it cancels dismissal
-- Press `Esc` or use the upward chevron to retract immediately
-- The hidden window is fully transparent and click-through, so it does not block the application underneath
-- Automatic edge reveal is suppressed while a full-screen application covers that display
-- The system tray menu provides Show, Hide, Refresh Usage, Check for Updates, and Quit
-- Tray Show is a recovery path that bypasses the edge gesture without stealing focus
-- Fixed top-center placement replaces the previous drag, resize, and remembered-position behavior
-- Refresh button for an immediate usage update
-- Adjustable whole-widget opacity from 35% to 100%
-- Adjustable panel opacity from 30% to 100%
+- Touch the center of a display's exact right edge to reveal the attached black usage panel
+- Move outside the panel to retract it after a short grace period
+- The tapered top and bottom edges join the screen border instead of forming a floating capsule
+- Each visible logo has a usage ring and a used-percentage label underneath
+- Settings is a separate window, opened from the tray, with on/off toggles for Claude, Cursor, Codex, and Antigravity
+- Click a disconnected logo to start that service's login flow
+- The dock hides while a full-screen application covers that display
+- The system tray menu provides Settings, Refresh Usage, Check for Updates, and Quit
+- Adjustable whole-dock opacity from 35% to 100%
 - Auto-refresh every 10 seconds, 30 seconds, 1 minute, or 5 minutes
-- Compact settings view for appearance, refresh timing, and update checks
 
 Settings are stored locally in Electron's application data folder.
 
 ## Privacy and security
 
-- Authentication remains owned by the Codex CLI in the user's Codex home folder.
-- The Windows widget never reads or stores Codex access tokens itself.
-- Usage is requested from a local child process (`codex app-server --stdio`).
+- Codex authentication remains owned by the Codex CLI in the user's Codex home folder.
+- The Windows dock never reads or stores Codex access tokens itself.
+- Codex usage is requested from a local child process (`codex app-server --stdio`).
+- Claude usage reads the local Claude Code session and, when the access token is expired, refreshes it in place in Claude's credentials file so the CLI stays in sync. Tokens are not copied into Throttle settings.
+- Cursor usage reads the IDE's local session read-only and does not save Cursor tokens. Tokens are used only in memory to query Cursor's usage API.
+- Antigravity usage reads the `agy` credential through the operating system keyring and uses it only to request quota. The credential is not copied into Throttle settings.
 - Optional iPhone access binds to localhost and is exposed only inside the
   user's tailnet with a random read-only pairing token.
 - The iOS app and widget store only that scoped pairing token, never the
-  Codex or ChatGPT authentication session.
+  Codex, Claude, or ChatGPT authentication session.
 - Electron renderer isolation is enabled and Node integration is disabled.
-- No analytics or third-party network code is included.
+- No analytics are included. Extra network calls are Claude's usage API and Cursor's usage API, and only for services enabled in settings.
 
 ## Development
 
 ```text
 npm test       # Node test suite
-npm start      # run the island
+npm start      # run the dock
 npm run pack   # unpacked Windows app
 npm run dist   # portable + NSIS builds
 ```
 
-Test coverage includes dock geometry, transition guards, full-screen classification, malformed/missing payloads, reset formatting, settings boundaries, and JSONL protocol framing.
+Test coverage includes dock geometry, full-screen classification, malformed/missing payloads, reset formatting, settings boundaries, Claude credentials, and JSONL protocol framing.
 
 ## Troubleshooting
 
-- **Codex login required:** run `codex login`, then click refresh.
-- **Only weekly limit is shown:** the account response currently has no 5-hour bucket. The island shows `N/A` rather than inventing data.
-- **Only monthly limit is shown:** free ChatGPT accounts report a monthly window, so Throttle hides the 5-hour and weekly limits and shows only the monthly one.
+- **Codex login required:** run `codex login`, then click the Codex logo or refresh from the tray.
+- **Claude login required:** run `claude auth login`, then click the Claude logo or refresh from the tray.
+- **Cursor login required:** open the Cursor app, sign in, then refresh. Throttle uses the same local session Cursor already stored.
+- **Antigravity login required:** run `agy` and complete its browser sign-in, then refresh from the tray.
+- **Only a monthly Codex number is shown:** free ChatGPT accounts report a monthly window.
 - **Codex not found:** ensure `codex --version` works in a new terminal and restart Throttle.
-- **Top edge does not reveal:** full-screen apps intentionally suppress the gesture. Use **Show Throttle** from the system tray to verify the app is running.
-- **Stacked monitors:** a boundary with another display directly above it is not treated as a physical top edge.
-- **Protocol error after a Codex update:** update this project and re-run tests; the app-server schema is version-specific.
+- **Claude not found:** ensure `claude --version` works in a new terminal and restart Throttle.
+- **The dock disappeared:** full-screen apps intentionally hide it. Leave full screen, or use **Settings** from the system tray to confirm Throttle is running.
 
 ## References
 
