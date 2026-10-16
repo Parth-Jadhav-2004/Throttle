@@ -48,6 +48,8 @@ function limitsEnvelope(ids, providers, nowMs = Date.now()) {
   return envelope;
 }
 
+const SPEND_SOURCE_NOTES = { cursor: 'Reported by Cursor.', opencode: 'Reported by OpenCode.' };
+
 function trendLine(summary, id) {
   return {
     type: 'barChart',
@@ -57,7 +59,7 @@ function trendLine(summary, id) {
       value: day.tokens,
       valueLabel: `${model.formatTokens(day.tokens)} tokens`
     })),
-    note: id === 'cursor' ? 'Reported by Cursor.' : `Estimated from local ${model.PROVIDER_META[id].name} logs at API rates.`,
+    note: SPEND_SOURCE_NOTES[id] || `Estimated from local ${model.PROVIDER_META[id].name} logs at API rates.`,
     color: null
   };
 }
@@ -87,7 +89,7 @@ function usageSnapshot(id, provider, spend) {
     displayName: model.PROVIDER_META[id]?.name || id,
     plan: provider?.data?.planType || null,
     lines,
-    fetchedAt: iso(provider?.updatedAt)
+    fetchedAt: iso(provider?.updatedAt || spend?.[id]?.updatedAt)
   };
 }
 

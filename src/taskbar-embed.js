@@ -38,12 +38,6 @@ function rectOf(handle) {
   return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
 }
 
-function address(handle) {
-  return handle ? String(api.koffi.address(handle)) : null;
-}
-
-// Rects are physical pixels. The strip is placed just left of the notification area,
-// in coordinates relative to the taskbar it is parented to.
 function findTaskbar() {
   if (!loadApi()) return null;
   const tray = api.FindWindowW('Shell_TrayWnd', null);
@@ -59,6 +53,25 @@ function findTaskbar() {
     notify: notifyRect,
     horizontal: taskbar.right - taskbar.left > taskbar.bottom - taskbar.top
   };
+}
+
+function taskbarRects() {
+  if (!loadApi()) return [];
+  const rects = [];
+  const primary = api.FindWindowW('Shell_TrayWnd', null);
+  if (primary) {
+    const r = rectOf(primary);
+    if (r) rects.push(r);
+  }
+  let prev = null;
+  while (true) {
+    const sec = api.FindWindowExW(null, prev, 'Shell_SecondaryTrayWnd', null);
+    if (!sec) break;
+    prev = sec;
+    const r = rectOf(sec);
+    if (r) rects.push(r);
+  }
+  return rects;
 }
 
 function stripPlacement(found, widthPx, gapPx) {
@@ -90,9 +103,21 @@ function quitThread(threadId) {
   return Boolean(loadApi() && threadId && api.PostThreadMessageW(threadId, 0x0012, 0, 0));
 }
 
+function address(handle) {
+  if (!handle) return 0;
+  if (typeof handle === 'bigint') return Number(handle);
+  if (typeof handle === 'number') return handle;
+  try {
+    return Number(api.koffi.address(handle));
+  } catch {
+    return 0;
+  }
+}
+
 module.exports = {
   available: () => Boolean(loadApi()),
   findTaskbar,
+  taskbarRects,
   stripPlacement,
   embed,
   move,

@@ -1,7 +1,7 @@
 {
   "name": "throttle",
-  "version": "0.2.0",
-  "description": "A Windows tray app for live Claude, Codex, Cursor, and Antigravity usage limits.",
+  "version": "0.2.1",
+  "description": "A Windows tray app for live Claude, Codex, Cursor, Antigravity, and OpenCode usage.",
   "main": "src/main.js",
   "author": "Parth Jadhav",
   "license": "MIT",

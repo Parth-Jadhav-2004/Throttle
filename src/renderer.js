@@ -2,14 +2,14 @@ const $ = id => document.getElementById(id);
 const model = window.usageModel;
 const { PROVIDER_META } = model;
 
-const PROVIDER_IDS = ['claude', 'codex', 'cursor', 'antigravity'];
+const PROVIDER_IDS = ['claude', 'codex', 'cursor', 'antigravity', 'opencode'];
 const MAX_STARRED = 2;
 const MAX_VIEW_HEIGHT = 640;
 const TICK_MS = 15 * 1000;
 const TIP_DELAY_MS = 380;
 const UNDO_LIMIT = 30;
 const LAYOUT_KEYS = [
-  'providerOrder', 'showClaude', 'showCodex', 'showCursor', 'showAntigravity',
+  'providerOrder', 'showClaude', 'showCodex', 'showCursor', 'showAntigravity', 'showOpenCode',
   'hiddenMetrics', 'starredMetrics', 'placements', 'taskbarHiddenProviders'
 ];
 const CONNECT_LABELS = {
@@ -18,6 +18,7 @@ const CONNECT_LABELS = {
   cursor: 'Open Cursor',
   antigravity: 'Open Antigravity CLI'
 };
+const SPEND_SOURCE_LABELS = { cursor: 'Reported by Cursor', opencode: 'Reported by OpenCode' };
 const SPEND_METRICS = { cost: 'Cost', rate: 'Cost/MTok', tokens: 'Tokens' };
 const SPEND_PERIOD_LABELS = { today: 'today', yesterday: 'yesterday', last30: 'in the last 30 days' };
 const DEPTH = { welcome: 0, dashboard: 0, customize: 1, settings: 1, about: 1, provider: 2 };
@@ -385,7 +386,7 @@ function renderTrendRow(row, id, summary) {
       ? `${date} · ${model.formatMoney(day.cost)} · ${model.formatTokens(day.tokens)} tokens`
       : `${date} · no usage`;
   });
-  const source = state.spend?.[id]?.source === 'cursor' ? 'Reported by Cursor' : 'Estimated at API rates';
+  const source = SPEND_SOURCE_LABELS[state.spend?.[id]?.source] || 'Estimated at API rates';
   row.querySelector('.trend-note').textContent = `30 days · ${source}`;
 }
 
@@ -423,8 +424,27 @@ function renderRows(host, id, entries) {
 
 function renderNotice(card, id, provider) {
   const notice = card.querySelector('.notice');
-  if (provider?.data) {
+  if (provider?.data || spendSummary(id)) {
     notice.hidden = true;
+    return;
+  }
+  if (model.SPEND_ONLY_PROVIDERS.includes(id)) {
+    const spend = state.spend?.[id];
+    if (!spend) {
+      notice.hidden = false;
+      notice.className = 'notice is-loading';
+      notice.replaceChildren(el('div', 'skeleton'), el('div', 'skeleton'));
+      return;
+    }
+    notice.hidden = false;
+    notice.className = 'notice';
+    const missing = spend.available === false;
+    notice.replaceChildren(
+      el('p', 'notice-title', missing ? 'OpenCode not found' : 'No usage yet'),
+      el('p', 'notice-copy', missing
+        ? `Throttle reads ${PROVIDER_META[id].name}’s local database. Install OpenCode, or run a session, to track spend here.`
+        : `No ${PROVIDER_META[id].name} messages in the last 30 days.`)
+    );
     return;
   }
   notice.hidden = false;
@@ -477,7 +497,8 @@ function renderSection(id) {
 
   const parts = [];
   if (data?.account) parts.push(escapeHtml(data.account));
-  if (provider?.updatedAt) parts.push(`Updated ${model.formatAgo(provider.updatedAt)}`);
+  const updatedAt = provider?.updatedAt || state.spend?.[id]?.updatedAt;
+  if (updatedAt) parts.push(`Updated ${model.formatAgo(updatedAt)}`);
   if (provider?.error && data) parts.push(`<span class="meta-error">${escapeHtml(provider.error)}</span>`);
   card.querySelector('.meta').innerHTML = parts.join(' · ') || 'Waiting for first refresh';
 
@@ -643,13 +664,20 @@ function renderProvider() {
   const id = detailProvider;
   if (!id) return;
   const provider = state.providers[id];
+  const spendOnly = model.SPEND_ONLY_PROVIDERS.includes(id);
+  const spend = state.spend?.[id];
   $('provider-title').textContent = PROVIDER_META[id].name;
   const hero = $('provider-hero');
   hero.replaceChildren(logoTile(id, 'large'));
   const copy = el('div', 'hero-copy');
-  const status = provider?.data
-    ? (provider.error ? `Showing last values · ${provider.error}` : `Connected${provider.data.planType ? ` · ${provider.data.planType}` : ''}`)
-    : provider?.status === 'disconnected' ? 'Not signed in' : provider?.error || 'Waiting for first refresh';
+  let status;
+  if (provider?.data) {
+    status = provider.error ? `Showing last values · ${provider.error}` : `Connected${provider.data.planType ? ` · ${provider.data.planType}` : ''}`;
+  } else if (spendOnly) {
+    status = spend?.available === false ? 'OpenCode not found on this PC' : 'Reading spend from the OpenCode database';
+  } else {
+    status = provider?.status === 'disconnected' ? 'Not signed in' : provider?.error || 'Waiting for first refresh';
+  }
   copy.append(el('strong', '', PROVIDER_META[id].name), el('span', '', escapeHtml(status)));
   hero.append(copy, switchButton(isEnabled(id), `Show ${PROVIDER_META[id].name}`, on => update({ [settingKey(id)]: on })));
 
@@ -667,6 +695,8 @@ function renderProvider() {
   const catalog = catalogFor(id);
   const quota = model.metricsForProvider(id, provider?.data);
   const taskbarKeys = new Set(model.starredFor(id, quota, state.settings).map(m => model.metricKey(id, m.id)));
+  // Nothing to star without a limit meter, so the taskbar row stays out of the way.
+  if (!quota.length) taskbar.hidden = true;
   for (const placement of ['always', 'demand']) {
     const host = $(`provider-${placement}`);
     const entries = catalog.filter(entry => entry.placement === placement);
@@ -674,7 +704,9 @@ function renderProvider() {
     if (!entries.length) host.append(el('div', 'list-empty', placement === 'always' ? 'Nothing pinned here' : 'Nothing tucked away'));
   }
   $('provider-metrics-empty').hidden = catalog.length > 0;
-  $('provider-connect').textContent = CONNECT_LABELS[id];
+  const connect = $('provider-connect');
+  connect.textContent = CONNECT_LABELS[id] || '';
+  connect.hidden = !CONNECT_LABELS[id];
 }
 
 function metricSettingRow(id, entry, taskbarKeys) {

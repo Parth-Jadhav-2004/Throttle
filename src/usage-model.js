@@ -38,6 +38,14 @@
       links: [
         { label: 'Docs', url: 'https://antigravity.google/docs' }
       ]
+    },
+    opencode: {
+      name: 'OpenCode',
+      color: '#b8bcc8',
+      links: [
+        { label: 'Console', url: 'https://opencode.ai/console' },
+        { label: 'Docs', url: 'https://opencode.ai/docs' }
+      ]
     }
   };
 
@@ -55,16 +63,15 @@
       { id: 'included', label: 'Cursor models' },
       { id: 'api', label: 'Other models' }
     ],
-    antigravity: []
+    antigravity: [
+      { id: 'quota', label: 'All models' }
+    ],
+    opencode: []
   };
 
   function clampPercent(value) {
     const n = Number(value);
     return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : null;
-  }
-
-  function slug(text) {
-    return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'quota';
   }
 
   function metric(id, label, window, fallbackMins = null) {
@@ -103,19 +110,28 @@
       return [included, metric('api', 'Other models', data.api)].filter(Boolean);
     }
     if (provider === 'antigravity') {
-      const seen = new Set();
-      return (data.windows || []).map(window => {
-        const label = window.label || window.group || 'Quota';
-        let id = slug(label);
-        while (seen.has(id)) id += '-2';
-        seen.add(id);
-        return metric(id, label, window);
-      }).filter(Boolean);
+      // One bar covers every model, so report the window that is closest to its limit.
+      let worst = null;
+      let worstUsed = -1;
+      for (const window of data.windows || []) {
+        const used = clampPercent(window?.usedPercent);
+        if (used == null || used <= worstUsed) continue;
+        worst = window;
+        worstUsed = used;
+      }
+      const aggregate = clampPercent(data.usedPercent);
+      if (aggregate == null && !worst) return [];
+      return [metric('quota', 'All models', {
+        usedPercent: aggregate ?? worstUsed,
+        resetsAt: worst?.resetsAt
+      })].filter(Boolean);
     }
     return [];
   }
 
-  const SPEND_PROVIDERS = ['claude', 'codex', 'cursor'];
+  const SPEND_PROVIDERS = ['claude', 'codex', 'cursor', 'opencode'];
+  // Providers that report spend but publish no limit windows, so their card is spend-only.
+  const SPEND_ONLY_PROVIDERS = SPEND_PROVIDERS.filter(id => !(STATIC_METRICS[id] || []).length);
   const SPEND_ROWS = [
     { id: 'today', label: 'Today', kind: 'spend', placement: 'demand' },
     { id: 'yesterday', label: 'Yesterday', kind: 'spend', placement: 'demand' },
@@ -390,6 +406,7 @@
     metricCatalog,
     metricKey,
     SPEND_PROVIDERS,
+    SPEND_ONLY_PROVIDERS,
     placementFor,
     starredFor,
     isStarred,

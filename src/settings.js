@@ -15,13 +15,14 @@ const PROVIDERS = [
   { id: 'claude', setting: 'showClaude', label: 'Claude' },
   { id: 'codex', setting: 'showCodex', label: 'Codex' },
   { id: 'cursor', setting: 'showCursor', label: 'Cursor' },
-  { id: 'antigravity', setting: 'showAntigravity', label: 'Antigravity' }
+  { id: 'antigravity', setting: 'showAntigravity', label: 'Antigravity' },
+  { id: 'opencode', setting: 'showOpenCode', label: 'OpenCode' }
 ];
 const PROVIDER_IDS = PROVIDERS.map(provider => provider.id);
 const MAX_STARRED_PER_PROVIDER = 2;
 const DEFAULT_SHORTCUT = 'CommandOrControl+Alt+U';
 const LAYOUT_KEYS = [
-  'providerOrder', 'showClaude', 'showCodex', 'showCursor', 'showAntigravity',
+  'providerOrder', 'showClaude', 'showCodex', 'showCursor', 'showAntigravity', 'showOpenCode',
   'hiddenMetrics', 'starredMetrics', 'placements', 'taskbarHiddenProviders'
 ];
 
@@ -83,6 +84,7 @@ function sanitizeSettings(value = {}) {
     showCodex: bool(value.showCodex, true),
     showCursor: value.showCursor != null ? Boolean(value.showCursor) : bool(value.includeCursor, true),
     showAntigravity: bool(value.showAntigravity, true),
+    showOpenCode: bool(value.showOpenCode, true),
     providerOrder: sanitizeOrder(value.providerOrder),
     theme: oneOf(value.theme, ['system', 'dark', 'light'], 'system'),
     density: oneOf(value.density, ['default', 'compact'], 'default'),

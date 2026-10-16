@@ -2,11 +2,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { EventEmitter } = require('node:events');
 const { PricingCatalog } = require('./pricing');
+const { OpenCodeScanner } = require('./opencode-spend');
 const spend = require('./spend');
 
 const DAY_MS = 86400000;
 const LOCAL_INTERVAL_MS = 60 * 1000;
 const CURSOR_INTERVAL_MS = 10 * 60 * 1000;
+// Providers whose spend Throttle reads straight off the local machine.
+const LOCAL_SCANNERS = ['claude', 'codex', 'opencode'];
+const SOURCES = { claude: 'logs', codex: 'logs', opencode: 'opencode' };
 
 function startOfDay(ms) {
   const d = new Date(ms);
@@ -22,7 +26,11 @@ class SpendService extends EventEmitter {
     this.isEnabled = isEnabled;
     this.now = now;
     this.pricing = new PricingCatalog({ cacheDir });
-    this.scanners = { claude: spend.createClaudeScanner(), codex: spend.createCodexScanner() };
+    this.scanners = {
+      claude: spend.createClaudeScanner(),
+      codex: spend.createCodexScanner(),
+      opencode: new OpenCodeScanner()
+    };
     this.results = {};
     this.cursor = this.loadCursorCache();
     this.busy = new Set();
@@ -60,7 +68,9 @@ class SpendService extends EventEmitter {
     void this.refreshCursor();
     this.timers.push(setInterval(() => void this.refreshLocal(), LOCAL_INTERVAL_MS));
     this.timers.push(setInterval(() => void this.refreshCursor(), CURSOR_INTERVAL_MS));
-    this.timers.push(setInterval(() => void this.pricing.refresh().then(changed => changed && this.refreshLocal()), 6 * 3600 * 1000));
+    // Hourly, because the pricing supplement revalidates that often and its own interval keeps the
+    // larger LiteLLM catalog to once a day.
+    this.timers.push(setInterval(() => void this.pricing.refresh().then(changed => changed && this.refreshLocal()), 3600 * 1000));
   }
 
   stop() {
@@ -69,7 +79,7 @@ class SpendService extends EventEmitter {
   }
 
   async refreshLocal() {
-    for (const id of ['claude', 'codex']) {
+    for (const id of LOCAL_SCANNERS) {
       if (!this.isEnabled(id) || this.busy.has(id)) continue;
       this.busy.add(id);
       try {
@@ -77,7 +87,9 @@ class SpendService extends EventEmitter {
         let events = await this.scanners[id].scan(now);
         if (id === 'claude') events = spend.dedupeEvents(events);
         const summary = spend.summarize(spend.aggregate(events, this.pricing, now), now);
-        this.results[id] = summary.last30 ? { summary, updatedAt: now, source: 'logs' } : null;
+        this.results[id] = summary.last30
+          ? { summary, updatedAt: now, source: SOURCES[id] }
+          : this.emptyResult(id, now);
       } catch (error) {
         console.warn(`Throttle could not scan ${id} logs:`, error.message);
       } finally {
@@ -85,6 +97,12 @@ class SpendService extends EventEmitter {
       }
     }
     this.emit('update');
+  }
+
+  // OpenCode reports whether it is installed so the card can say so instead of staying blank.
+  emptyResult(id, now) {
+    if (id !== 'opencode') return null;
+    return { summary: null, updatedAt: now, source: SOURCES[id], available: this.scanners[id].available() };
   }
 
   async refreshCursor({ force = false } = {}) {

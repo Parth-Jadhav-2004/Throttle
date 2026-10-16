@@ -44,6 +44,8 @@ const { evaluateAlerts } = require('./alerts');
 const { startLocalApi } = require('./local-api');
 const { getCursorStateDbPath } = require('./cursor-auth');
 const { getClaudeCredentialsPath } = require('./claude-auth');
+const { opencodeDbPath } = require('./opencode-spend');
+const embedder = require('./taskbar-embed');
 
 const ISSUES_URL = 'https://github.com/Parth-Jadhav-2004/Throttle/issues/new';
 
@@ -109,7 +111,8 @@ function detectProviders() {
     claude: exists(getClaudeCredentialsPath()) || exists(path.join(home, '.claude', 'projects')),
     codex: exists(path.join(process.env.CODEX_HOME || path.join(home, '.codex'), 'auth.json')),
     cursor: exists(getCursorStateDbPath()),
-    antigravity: exists(path.join(home, '.gemini', 'antigravity-cli'))
+    antigravity: exists(path.join(home, '.gemini', 'antigravity-cli')),
+    opencode: exists(opencodeDbPath())
   };
 }
 
@@ -299,12 +302,30 @@ function trayAnchor() {
   return bounds && bounds.width ? bounds : null;
 }
 
+function findTaskbarOnDisplay(display) {
+  if (!embedder.available() || !display) return null;
+  for (const r of embedder.taskbarRects()) {
+    const physical = { x: r.left, y: r.top, width: r.right - r.left, height: r.bottom - r.top };
+    const dip = screen.screenToDipRect(null, physical);
+    if (
+      dip.x < display.bounds.x + display.bounds.width &&
+      dip.x + dip.width > display.bounds.x &&
+      dip.y < display.bounds.y + display.bounds.height &&
+      dip.y + dip.height > display.bounds.y
+    ) {
+      return dip;
+    }
+  }
+  return null;
+}
+
 function positionPopup() {
   if (!popup || popup.isDestroyed()) return;
   const anchor = popupAnchor || trayAnchor();
   const point = anchor ? { x: anchor.x + anchor.width / 2, y: anchor.y + anchor.height / 2 } : screen.getCursorScreenPoint();
   const display = screen.getDisplayNearestPoint(point);
-  const bounds = getPopupBounds({ display, anchor, height: popupHeight });
+  const taskbar = findTaskbarOnDisplay(display);
+  const bounds = getPopupBounds({ display, anchor, height: popupHeight, taskbar });
   popup.setBounds({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }, false);
   return bounds;
 }
@@ -321,6 +342,7 @@ function showPopup(view, anchor = null) {
 function hidePopup() {
   if (!popup || popup.isDestroyed() || !popup.isVisible()) return;
   popupHiddenAt = Date.now();
+  popupAnchor = null;
   popup.hide();
   popup.webContents.send('popup-hidden');
 }
@@ -559,7 +581,8 @@ const FETCHERS = {
 };
 
 async function refreshProvider(id, { force = false } = {}) {
-  if (!isEnabled(id) || refreshing.has(id)) return;
+  // Spend-only providers (OpenCode) have no usage endpoint to poll.
+  if (!FETCHERS[id] || !isEnabled(id) || refreshing.has(id)) return;
   refreshing.add(id);
   sendSnapshot();
   try {

@@ -8,7 +8,8 @@ test('uses safe defaults with every provider on', () => assert.deepEqual(sanitiz
   showCodex: true,
   showCursor: true,
   showAntigravity: true,
-  providerOrder: ['claude', 'codex', 'cursor', 'antigravity'],
+  showOpenCode: true,
+  providerOrder: ['claude', 'codex', 'cursor', 'antigravity', 'opencode'],
   theme: 'system',
   density: 'default',
   reduceAnimations: false,
@@ -58,14 +59,14 @@ test('migrates includeCursor into showCursor and honors explicit toggles', () =>
 test('repairs provider order, keeping known ids once and appending missing ones', () => {
   assert.deepEqual(
     sanitizeSettings({ providerOrder: ['cursor', 'bogus', 'cursor', 'claude'] }).providerOrder,
-    ['cursor', 'claude', 'codex', 'antigravity']
+    ['cursor', 'claude', 'codex', 'antigravity', 'opencode']
   );
 });
 
 test('lists visible providers in the saved order', () => {
   assert.deepEqual(
     visibleProviderIds(sanitizeSettings({ providerOrder: ['cursor', 'codex'], showClaude: false })),
-    ['cursor', 'codex', 'antigravity']
+    ['cursor', 'codex', 'antigravity', 'opencode']
   );
 });
 

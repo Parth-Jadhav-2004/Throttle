@@ -27,7 +27,7 @@ test('alerts once when a meter crosses into almost out', () => {
   let result = evaluateAlerts({ providers: gemini(70), settings: ALL_ON, memory: {}, nowSec: NOW });
   result = evaluateAlerts({ providers: gemini(92), settings: ALL_ON, memory: result.memory, nowSec: NOW });
   assert.deepEqual(result.alerts.map(a => a.kind), ['almostOut']);
-  assert.match(result.alerts[0].body, /Antigravity Gemini: 8% left/);
+  assert.match(result.alerts[0].body, /Antigravity All models: 8% left/);
   result = evaluateAlerts({ providers: gemini(93), settings: ALL_ON, memory: result.memory, nowSec: NOW });
   assert.deepEqual(result.alerts, []);
 });

@@ -160,3 +160,88 @@ test('scans log folders and re-reads only files that changed', async () => {
   fs.utimesSync(file, new Date(), new Date(Date.now() + 1000));
   assert.equal((await scanner.scan()).length, 2);
 });
+
+const claudeLine = id => JSON.stringify({ timestamp: new Date().toISOString(), requestId: id, message: { id, model: 'claude-sonnet-4-5', usage: { input_tokens: 1, output_tokens: 1 } } });
+
+function logRoot(prefix) {
+  return fs.mkdtempSync(path.join(os.tmpdir(), `throttle-${prefix}-`));
+}
+
+test('resumes an appended log from where it stopped instead of reading it whole', async () => {
+  const root = logRoot('append');
+  const file = path.join(root, 'session.jsonl');
+  fs.writeFileSync(file, `${claudeLine('a')}\n${claudeLine('b')}\n`);
+  const scanner = spend.createClaudeScanner(() => [root]);
+  assert.equal((await scanner.scan()).length, 2);
+
+  const wholeReads = [];
+  const readFile = fs.promises.readFile;
+  fs.promises.readFile = async (...args) => {
+    wholeReads.push(args[0]);
+    return readFile(...args);
+  };
+  try {
+    fs.appendFileSync(file, `${claudeLine('c')}\n`);
+    assert.equal((await scanner.scan()).length, 3);
+  } finally {
+    fs.promises.readFile = readFile;
+  }
+  assert.deepEqual(wholeReads, []);
+  assert.equal(scanner.files.get(file).offset, fs.statSync(file).size);
+});
+
+test('waits for a whole line before parsing an appended log', async () => {
+  const root = logRoot('partial');
+  const file = path.join(root, 'session.jsonl');
+  const line = claudeLine('a');
+  fs.writeFileSync(file, line.slice(0, 20));
+  const scanner = spend.createClaudeScanner(() => [root]);
+  assert.deepEqual(await scanner.scan(), []);
+  fs.appendFileSync(file, `${line.slice(20)}\n`);
+  assert.equal((await scanner.scan()).length, 1);
+});
+
+test('reads a rewritten or truncated log in full rather than appending to it', async () => {
+  const root = logRoot('rewrite');
+  const file = path.join(root, 'session.jsonl');
+  fs.writeFileSync(file, `${claudeLine('a')}\n`);
+  const scanner = spend.createClaudeScanner(() => [root]);
+  assert.equal((await scanner.scan()).length, 1);
+
+  // Same length, different content: the append path must not swallow it.
+  fs.writeFileSync(file, `${claudeLine('z')}\n`);
+  const rewritten = await scanner.scan();
+  assert.equal(rewritten.length, 1);
+  assert.equal(rewritten[0].dedupe, 'z:z');
+
+  // Shorter file: nothing left to resume from.
+  fs.writeFileSync(file, `${claudeLine('y')}\n`);
+  fs.writeFileSync(file, claudeLine('y').slice(0, 30));
+  assert.deepEqual(await scanner.scan(), []);
+});
+
+test('carries the Codex repeat-skipping state across appended batches', async () => {
+  const root = logRoot('codex-append');
+  const file = path.join(root, 'rollout.jsonl');
+  const ts = new Date().toISOString();
+  const totals = { input_tokens: 100, cached_input_tokens: 40, output_tokens: 10 };
+  const count = (total, input = 100, output = 10) => JSON.stringify({
+    timestamp: ts,
+    type: 'event_msg',
+    payload: { type: 'token_count', info: { last_token_usage: { input_tokens: input, cached_input_tokens: 40, output_tokens: output }, total_token_usage: total } }
+  });
+  fs.writeFileSync(file, `${JSON.stringify({ type: 'turn_context', payload: { model: 'gpt-5' } })}\n${count(totals)}\n`);
+  const scanner = spend.createCodexScanner(() => [root]);
+  assert.equal((await scanner.scan()).length, 1);
+
+  // The same totals repeated is a no-op, even though it lands in a later batch.
+  fs.appendFileSync(file, `${count(totals)}\n`);
+  assert.equal((await scanner.scan()).length, 1);
+
+  // No new turn_context in this batch, so the model comes from the carried state.
+  fs.appendFileSync(file, `${count({ input_tokens: 150, cached_input_tokens: 40, output_tokens: 15 }, 50, 5)}\n`);
+  const events = await scanner.scan();
+  assert.equal(events.length, 2);
+  assert.equal(events[1].model, 'gpt-5');
+  assert.deepEqual(events[1].tokens, { input: 10, cacheWrite5m: 0, cacheWrite1h: 0, cacheRead: 40, output: 5 });
+});

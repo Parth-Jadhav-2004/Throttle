@@ -344,7 +344,7 @@ svg.ico-fill { fill: currentColor; stroke: none; }
 .logo-tile.mini { width: 16px; height: 16px; background: none !important; box-shadow: none !important; }
 .logo-tile.mini .logo-glyph { width: 15px; height: 15px; background: var(--text); }
 .logo-claude { background: #d97757; }
-.logo-codex, .logo-cursor, .logo-antigravity { background: #141415; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+.logo-codex, .logo-cursor, .logo-antigravity, .logo-opencode { background: #141415; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
 .logo-antigravity .logo-glyph { background: #6aa0ff; }
 
 .spinner {

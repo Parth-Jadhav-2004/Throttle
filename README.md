@@ -1,6 +1,6 @@
 # Throttle
 
-A Windows system-tray app for monitoring **Claude Code**, **Codex**, **Cursor**, and **Google Antigravity CLI** usage limits.
+A Windows system-tray app for monitoring **Claude Code**, **Codex**, **Cursor**, and **Google Antigravity CLI** usage limits, plus **OpenCode** spend.
 
 [Download the latest Windows release](https://github.com/Parth-Jadhav-2004/Throttle/releases/latest)
 
@@ -10,12 +10,13 @@ A Windows system-tray app for monitoring **Claude Code**, **Codex**, **Cursor**,
 - Cursor included-usage percentage, from the local Cursor IDE session
 - Monthly Codex limit for free ChatGPT accounts
 - 5-hour and weekly Codex limits, when the account reports those windows
-- Antigravity model quota, from the local `agy` CLI session
+- Antigravity quota across all models, as a single limit, from the local `agy` CLI session
 
-It also tracks spend, priced from the [LiteLLM](https://github.com/BerriAI/litellm) model price list:
+It also tracks spend, priced from the [LiteLLM](https://github.com/BerriAI/litellm) model price list, with an OpenUsage-style [pricing supplement](https://github.com/robinebers/openusage) layered on top for the models no public catalog carries, provider model-slug aliases, and fast-variant multipliers:
 
 - Claude Code and Codex spend and tokens, read from their local session logs (`~/.claude/projects`, `~/.codex/sessions`)
 - Cursor spend and tokens, from Cursor's own usage-events API
+- OpenCode spend and tokens, as reported by OpenCode in its own local database (`~/.local/share/opencode/opencode.db`)
 
 ### Taskbar strip
 
@@ -34,7 +35,7 @@ Click the strip or the tray icon, or press the global shortcut (**Ctrl + Alt + U
   - green while you're on course to finish the window with room to spare
   - amber when the projection lands in the last 10%
   - red, with a flame icon and a projected run-out time, when you'll hit the limit before it resets
-- **Spend rows** under Claude, Codex, and Cursor show Today, Yesterday, and Last 30 Days, along with a 30-day usage trend chart.
+- **Spend rows** under Claude, Codex, Cursor, and OpenCode show Today, Yesterday, and Last 30 Days, along with a 30-day usage trend chart.
 - **Footer**: the version, a "Next update in…" countdown, and an **Options** menu with Customize, Settings, Share Screenshot, Refresh All, Check for Updates, Report an Issue, About, and Quit.
 
 The tray icon draws your two starred (or most-used) limits as mini bars, or shows the Throttle logo.
@@ -54,7 +55,7 @@ It only accepts loopback `Host` headers and sends no CORS headers, so web pages 
 
 Throttle uses the official local `codex app-server` protocol and its `account/rateLimits/read` method. It does **not** scrape ChatGPT, copy browser cookies, or ask for an API key.
 
-Claude usage is read from the local Claude Code session in `~/.claude/.credentials.json` and requested from Anthropic's usage endpoint. Cursor usage reads the local Cursor IDE session from `state.vscdb` and asks Cursor's dashboard API for the current billing-cycle limits. Antigravity quota is read through the local `agy` credential and the same Cloud Code quota flow used by its `/usage` panel. Throttle does **not** copy those sessions into its own settings.
+Claude usage is read from the local Claude Code session in `~/.claude/.credentials.json` and requested from Anthropic's usage endpoint. Cursor usage reads the local Cursor IDE session from `state.vscdb` and asks Cursor's dashboard API for the current billing-cycle limits. Antigravity quota is read through the local `agy` credential and the same Cloud Code quota flow used by its `/usage` panel. OpenCode spend is read read-only from OpenCode's own local database; Throttle makes no network calls for it. Throttle does **not** copy any of those sessions into its own settings.
 
 > Important: Codex tracking covers rate-limit windows attached to your ChatGPT subscription. It cannot track every general ChatGPT model/message cap because OpenAI does not expose those caps through this Codex method.
 
@@ -85,8 +86,8 @@ If a service is signed out, its card shows a sign-in button that starts the matc
 
 Run `npm run dist` to create:
 
-- `dist/portable/Throttle-0.2.0-x64-Portable.exe` — portable executable
-- `dist/installer/Throttle-0.2.0-x64-Setup.exe` — Windows installer
+- `dist/portable/Throttle-0.2.1-x64-Portable.exe` — portable executable
+- `dist/installer/Throttle-0.2.1-x64-Setup.exe` — Windows installer
 
 ## iPhone app and widgets
 
@@ -142,12 +143,13 @@ Settings and the usage cache are stored locally in Electron's application data f
 - Claude usage reads the local Claude Code session and, when the access token is expired, refreshes it in place in Claude's credentials file so the CLI stays in sync. Tokens are not copied into Throttle settings.
 - Cursor usage reads the IDE's local session read-only and does not save Cursor tokens. Tokens are used only in memory to query Cursor's usage API.
 - Antigravity usage reads the `agy` credential through the operating system keyring and uses it only to request quota. The credential is not copied into Throttle settings.
+- OpenCode spend is read read-only from OpenCode's local SQLite database. No OpenCode credentials or API keys are read or copied.
 - Optional iPhone access binds to localhost and is exposed only inside the
   user's tailnet with a random read-only pairing token.
 - The iOS app and widget store only that scoped pairing token, never the
   Codex, Claude, or ChatGPT authentication session.
 - Electron renderer isolation is enabled and Node integration is disabled.
-- No analytics are included. Throttle only calls each enabled provider's own usage API, and it fetches the LiteLLM price list from GitHub once a day.
+- No analytics are included. Throttle only calls each enabled provider's own usage API, and it fetches the LiteLLM price list from GitHub once a day and OpenUsage's published pricing supplement hourly.
 - **Hide from screen sharing** hides only the popup from screen capture; the taskbar strip stays visible.
 
 ## Development
@@ -169,6 +171,7 @@ Test coverage includes pace projection, reset and value formatting, popup placem
 - **Claude login required:** run `claude auth login`, then click **Try again** on the Claude card.
 - **Cursor login required:** open the Cursor app, sign in, then refresh. Throttle uses the same local session Cursor already stored.
 - **Antigravity login required:** run `agy` and complete its browser sign-in, then refresh from the tray.
+- **OpenCode not found:** Throttle reads OpenCode's own local database. Install OpenCode, or run a session, then refresh from the tray.
 - **Only a monthly Codex number is shown:** free ChatGPT accounts report a monthly window.
 - **Codex not found:** ensure `codex --version` works in a new terminal and restart Throttle.
 - **Claude not found:** ensure `claude --version` works in a new terminal and restart Throttle.

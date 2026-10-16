@@ -34,18 +34,24 @@ test('maps each provider into labelled metrics', () => {
   });
   assert.equal(cursor[0].label, 'Included requests');
   assert.equal(cursor[0].detail, '120 left');
-  assert.deepEqual(
-    model.metricsForProvider('antigravity', {
-      windows: [{ label: 'Gemini 3 Pro', usedPercent: 20 }, { label: 'Gemini 3 Pro', usedPercent: 30 }]
-    }).map(m => m.id),
-    ['gemini-3-pro', 'gemini-3-pro-2']
-  );
+  const antigravity = model.metricsForProvider('antigravity', {
+    usedPercent: 30,
+    windows: [
+      { label: 'Gemini 3 Pro', usedPercent: 20, resetsAt: NOW + 600 },
+      { label: 'Gemini 3 Pro', usedPercent: 30, resetsAt: NOW + 1200 }
+    ]
+  });
+  assert.deepEqual(antigravity.map(m => m.id), ['quota']);
+  assert.equal(antigravity[0].label, 'All models');
+  assert.equal(antigravity[0].usedPercent, 30);
+  assert.equal(antigravity[0].resetsAt, NOW + 1200);
+  assert.deepEqual(model.metricsForProvider('antigravity', { windows: [] }), []);
   assert.deepEqual(model.metricsForProvider('claude', null), []);
 });
 
 test('metric catalog keeps static entries even before data arrives', () => {
   assert.deepEqual(model.metricCatalog('claude', null).map(m => m.id), ['session', 'weekly', 'today', 'yesterday', 'last30', 'trend']);
-  assert.deepEqual(model.metricCatalog('antigravity', { windows: [{ label: 'Claude', usedPercent: 1 }] }).map(m => m.id), ['claude']);
+  assert.deepEqual(model.metricCatalog('antigravity', { windows: [{ label: 'Claude', usedPercent: 1 }] }).map(m => m.id), ['quota']);
 });
 
 test('pace stays ok when the projection leaves a comfortable cushion', () => {
