@@ -3,14 +3,15 @@ const path = require('node:path');
 const { EventEmitter } = require('node:events');
 const { PricingCatalog } = require('./pricing');
 const { OpenCodeScanner } = require('./opencode-spend');
+const { MuseScanner } = require('./muse-spend');
 const spend = require('./spend');
 
 const DAY_MS = 86400000;
 const LOCAL_INTERVAL_MS = 60 * 1000;
 const CURSOR_INTERVAL_MS = 10 * 60 * 1000;
 // Providers whose spend Throttle reads straight off the local machine.
-const LOCAL_SCANNERS = ['claude', 'codex', 'opencode'];
-const SOURCES = { claude: 'logs', codex: 'logs', opencode: 'opencode' };
+const LOCAL_SCANNERS = ['claude', 'codex', 'opencode', 'muse'];
+const SOURCES = { claude: 'logs', codex: 'logs', opencode: 'opencode', muse: 'logs' };
 
 function startOfDay(ms) {
   const d = new Date(ms);
@@ -29,7 +30,8 @@ class SpendService extends EventEmitter {
     this.scanners = {
       claude: spend.createClaudeScanner(),
       codex: spend.createCodexScanner(),
-      opencode: new OpenCodeScanner()
+      opencode: new OpenCodeScanner(),
+      muse: new MuseScanner()
     };
     this.results = {};
     this.cursor = this.loadCursorCache();
@@ -99,9 +101,10 @@ class SpendService extends EventEmitter {
     this.emit('update');
   }
 
-  // OpenCode reports whether it is installed so the card can say so instead of staying blank.
+  // Log-reading providers report whether they are installed so the card can say so instead
+  // of staying blank. Muse reads a session store, so its presence is known up front too.
   emptyResult(id, now) {
-    if (id !== 'opencode') return null;
+    if (id !== 'opencode' && id !== 'muse') return null;
     return { summary: null, updatedAt: now, source: SOURCES[id], available: this.scanners[id].available() };
   }
 

@@ -39,6 +39,11 @@
         { label: 'Docs', url: 'https://antigravity.google/docs' }
       ]
     },
+    muse: {
+      name: 'Muse',
+      color: '#8b5cf6',
+      links: [{ label: 'Docs', url: 'https://dev.meta.ai' }]
+    },
     opencode: {
       name: 'OpenCode',
       color: '#b8bcc8',
@@ -66,6 +71,7 @@
     antigravity: [
       { id: 'quota', label: 'All models' }
     ],
+    muse: [],
     opencode: []
   };
 
@@ -129,7 +135,7 @@
     return [];
   }
 
-  const SPEND_PROVIDERS = ['claude', 'codex', 'cursor', 'opencode'];
+  const SPEND_PROVIDERS = ['claude', 'codex', 'cursor', 'opencode', 'muse'];
   // Providers that report spend but publish no limit windows, so their card is spend-only.
   const SPEND_ONLY_PROVIDERS = SPEND_PROVIDERS.filter(id => !(STATIC_METRICS[id] || []).length);
   const SPEND_ROWS = [

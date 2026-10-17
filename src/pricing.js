@@ -258,14 +258,22 @@ class PricingCatalog {
 
   fuzzy(name) {
     const keys = candidateKeys(name);
+    // The supplement's models participate in the same prefix matching, so variants published
+    // by an API (contributor, preview, internal builds) price from their base model's rate.
+    const pool = { ...this.models, ...this.supplement.models };
     for (const key of keys) {
-      if (this.models[key]) return this.models[key];
+      if (pool[key]) return pool[key];
     }
-    const base = keys[1] ?? keys[0];
-    const prefixed = Object.keys(this.models)
-      .filter(key => key.startsWith(`${base}-`) || base.startsWith(`${key}-`))
+    // Separator style differs between catalogs, so compare with dots and dashes normalized.
+    const canonical = key => key.replace(/\./g, '-');
+    const base = canonical(keys[1] ?? keys[0]);
+    const prefixed = Object.keys(pool)
+      .filter(key => {
+        const candidate = canonical(key);
+        return candidate.startsWith(`${base}-`) || base.startsWith(`${candidate}-`);
+      })
       .sort((a, b) => b.length - a.length)[0];
-    return prefixed ? this.models[prefixed] : null;
+    return prefixed ? pool[prefixed] : null;
   }
 
   // Tokens: { input, cacheWrite5m, cacheWrite1h, cacheRead, output }; input excludes cached tokens.

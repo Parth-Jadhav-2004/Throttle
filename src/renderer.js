@@ -2,14 +2,14 @@ const $ = id => document.getElementById(id);
 const model = window.usageModel;
 const { PROVIDER_META } = model;
 
-const PROVIDER_IDS = ['claude', 'codex', 'cursor', 'antigravity', 'opencode'];
+const PROVIDER_IDS = ['claude', 'codex', 'cursor', 'antigravity', 'muse', 'opencode'];
 const MAX_STARRED = 2;
 const MAX_VIEW_HEIGHT = 640;
 const TICK_MS = 15 * 1000;
 const TIP_DELAY_MS = 380;
 const UNDO_LIMIT = 30;
 const LAYOUT_KEYS = [
-  'providerOrder', 'showClaude', 'showCodex', 'showCursor', 'showAntigravity', 'showOpenCode',
+  'providerOrder', 'showClaude', 'showCodex', 'showCursor', 'showAntigravity', 'showMuse', 'showOpenCode',
   'hiddenMetrics', 'starredMetrics', 'placements', 'taskbarHiddenProviders'
 ];
 const CONNECT_LABELS = {
@@ -439,10 +439,11 @@ function renderNotice(card, id, provider) {
     notice.hidden = false;
     notice.className = 'notice';
     const missing = spend.available === false;
+    const sourceName = id === 'muse' ? 'session logs' : 'database';
     notice.replaceChildren(
-      el('p', 'notice-title', missing ? 'OpenCode not found' : 'No usage yet'),
+      el('p', 'notice-title', missing ? `${PROVIDER_META[id].name} not found` : 'No usage yet'),
       el('p', 'notice-copy', missing
-        ? `Throttle reads ${PROVIDER_META[id].name}’s local database. Install OpenCode, or run a session, to track spend here.`
+        ? `Throttle reads ${PROVIDER_META[id].name}’s local ${sourceName}. Install ${PROVIDER_META[id].name}, or run a session, to track spend here.`
         : `No ${PROVIDER_META[id].name} messages in the last 30 days.`)
     );
     return;
@@ -674,7 +675,9 @@ function renderProvider() {
   if (provider?.data) {
     status = provider.error ? `Showing last values · ${provider.error}` : `Connected${provider.data.planType ? ` · ${provider.data.planType}` : ''}`;
   } else if (spendOnly) {
-    status = spend?.available === false ? 'OpenCode not found on this PC' : 'Reading spend from the OpenCode database';
+    status = spend?.available === false
+      ? `${PROVIDER_META[id].name} not found on this PC`
+      : `Reading spend from ${PROVIDER_META[id].name}’s local logs`;
   } else {
     status = provider?.status === 'disconnected' ? 'Not signed in' : provider?.error || 'Waiting for first refresh';
   }

@@ -45,6 +45,7 @@ const { startLocalApi } = require('./local-api');
 const { getCursorStateDbPath } = require('./cursor-auth');
 const { getClaudeCredentialsPath } = require('./claude-auth');
 const { opencodeDbPath } = require('./opencode-spend');
+const { museSessionsRoots } = require('./muse-spend');
 const embedder = require('./taskbar-embed');
 
 const ISSUES_URL = 'https://github.com/Parth-Jadhav-2004/Throttle/issues/new';
@@ -112,7 +113,8 @@ function detectProviders() {
     codex: exists(path.join(process.env.CODEX_HOME || path.join(home, '.codex'), 'auth.json')),
     cursor: exists(getCursorStateDbPath()),
     antigravity: exists(path.join(home, '.gemini', 'antigravity-cli')),
-    opencode: exists(opencodeDbPath())
+    opencode: exists(opencodeDbPath()),
+    muse: museSessionsRoots().length > 0
   };
 }
 
