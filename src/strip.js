@@ -16,14 +16,15 @@ function el(tag, className, text) {
 function render(state) {
   document.documentElement.classList.toggle('light', !state.taskbarDark);
   const settings = state.settings || {};
-  const groups = model.stripEntries(state.providers, settings);
+  const groups = model.stripEntries(state.providers, settings, Date.now() / 1000, state.spend || {});
   const mode = settings.valueMode || 'left';
   const nodes = groups.map(group => {
     const node = el('span', 'group');
     const glyph = el('span', 'glyph');
     glyph.style.setProperty('--logo', `url("assets/${group.provider}.svg")`);
     node.append(glyph);
-    if (settings.taskbarStyle === 'bars') {
+    const hasTokens = group.metrics.some(entry => entry.metric.display === 'tokens');
+    if (settings.taskbarStyle === 'bars' && !hasTokens) {
       const bars = el('span', 'bars');
       for (const entry of group.metrics) {
         const fill = el('i', toneOf(entry));
@@ -36,7 +37,10 @@ function render(state) {
     } else {
       const values = el('span', group.metrics.length === 1 ? 'values single' : 'values');
       for (const entry of group.metrics) {
-        values.append(el('span', `v ${toneOf(entry)}`.trim(), `${Math.round(model.displayPercent(entry.metric, mode))}%`));
+        const text = entry.metric.display === 'tokens'
+          ? entry.metric.valueText
+          : `${Math.round(model.displayPercent(entry.metric, mode))}%`;
+        values.append(el('span', `v ${toneOf(entry)}`.trim(), text));
       }
       node.append(values);
     }

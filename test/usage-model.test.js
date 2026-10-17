@@ -123,17 +123,37 @@ test('tray metrics prefer starred metrics, else the two most used', () => {
   );
 });
 
-test('taskbar shows starred meters per provider, else the first two of each', () => {
+test('taskbar leads with tokens for providers used today, meters only while a limit runs low', () => {
   const providers = {
     claude: { data: { fiveHour: { usedPercent: 70 }, weekly: { usedPercent: 20 } } },
-    codex: { data: { fiveHour: { usedPercent: 90 }, weekly: { usedPercent: 10 }, monthly: { usedPercent: 5 } } }
+    codex: { data: { fiveHour: { usedPercent: 90 }, weekly: { usedPercent: 10 }, monthly: { usedPercent: 5 } } },
+    cursor: { data: { included: { usedPercent: 100 } } }
+  };
+  const spend = {
+    claude: { summary: { today: { tokens: 1_200_000 } } },
+    cursor: { summary: { today: { tokens: 60_000_000 } } }
   };
   const base = { providerOrder: ['claude', 'codex', 'cursor', 'antigravity'] };
-  const keys = settings => model.stripEntries(providers, { ...base, ...settings }, NOW).map(group => [group.provider, group.metrics.map(e => e.metric.id)]);
-  assert.deepEqual(keys({}), [['claude', ['session', 'weekly']], ['codex', ['session', 'weekly']]]);
-  assert.deepEqual(keys({ starredMetrics: ['codex:monthly'] }), [['claude', ['session', 'weekly']], ['codex', ['monthly']]]);
-  assert.deepEqual(keys({ taskbarHiddenProviders: ['claude'], hiddenMetrics: ['codex:session'] }), [['codex', ['weekly', 'monthly']]]);
-  assert.deepEqual(keys({ showCodex: false }), [['claude', ['session', 'weekly']]]);
+  const entries = (settings, withSpend = spend) =>
+    model.stripEntries(providers, { ...base, ...settings }, NOW, withSpend);
+  const describe = group => `${group.provider}:${group.metrics.map(e => e.metric.id + (e.metric.valueText ? `=${e.metric.valueText}` : '')).join(',')}`;
+
+  // Claude and Cursor burned tokens today, so they show tokens even with healthy meters left.
+  assert.deepEqual(entries({}).map(describe), [
+    'claude:today=1.2M',
+    'codex:session,weekly', // no usage today, but the 5h meter is close to its limit
+    'cursor:today=60M'
+  ]);
+  assert.equal(entries({}).find(g => g.provider === 'cursor').metrics[0].pace.tone, 'danger');
+  assert.equal(entries({}).find(g => g.provider === 'claude').metrics[0].pace?.tone ?? 'ok', 'ok');
+
+  // Without token usage, only providers with a low limit keep a slot on the strip.
+  assert.deepEqual(entries({}, {}).map(describe), ['codex:session,weekly', 'cursor:included']);
+  assert.deepEqual(entries({ starredMetrics: ['codex:monthly'] }, {}).map(describe), ['cursor:included']);
+  assert.deepEqual(entries({ starredMetrics: ['codex:monthly'] }, {}).filter(g => g.provider === 'codex'), []);
+  assert.deepEqual(entries({ taskbarHiddenProviders: ['codex'] }, {}).map(describe), ['cursor:included']);
+  assert.deepEqual(entries({ showCodex: false }, {}).map(describe), ['cursor:included']);
+  assert.equal(model.formatValue({ display: 'tokens', valueText: '1.2M' }, 'left'), '1.2M tokens today');
 });
 
 test('spend rows start on demand and the trend stays visible unless moved', () => {

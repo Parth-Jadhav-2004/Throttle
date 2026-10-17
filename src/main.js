@@ -296,7 +296,7 @@ function snapshot() {
 function sendSnapshot() {
   const state = snapshot();
   if (popup && !popup.isDestroyed()) popup.webContents.send('usage-state', state);
-  strip?.update({ settings: state.settings, providers: state.providers, taskbarDark: state.taskbarDark });
+  strip?.update({ settings: state.settings, providers: state.providers, spend: state.spend, taskbarDark: state.taskbarDark });
 }
 
 function trayAnchor() {

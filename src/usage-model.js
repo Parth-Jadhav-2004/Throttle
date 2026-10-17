@@ -177,7 +177,7 @@
     });
   }
 
-  function stripEntries(providers = {}, settings = {}, nowSec = Date.now() / 1000) {
+  function quotaEntries(providers = {}, settings = {}, nowSec = Date.now() / 1000) {
     const hiddenProviders = new Set(settings.taskbarHiddenProviders || []);
     const out = [];
     for (const provider of visibleIds(settings)) {
@@ -189,6 +189,38 @@
         provider,
         metrics: starred.map(m => ({ key: metricKey(provider, m.id), metric: m, pace: computePace(m, nowSec) }))
       });
+    }
+    return out;
+  }
+
+  const TONE_ORDER = { ok: 0, warn: 1, danger: 2 };
+
+  // The taskbar strip leads with today's usage: a provider that burned tokens today shows how
+  // many, still tinted by its most urgent limit meter. Providers without token usage today only
+  // keep a slot while one of their limits is actually running low.
+  function stripEntries(providers = {}, settings = {}, nowSec = Date.now() / 1000, spend = {}) {
+    const hiddenProviders = new Set(settings.taskbarHiddenProviders || []);
+    const out = [];
+    for (const provider of visibleIds(settings)) {
+      if (hiddenProviders.has(provider)) continue;
+      const metrics = metricsForProvider(provider, providers[provider]?.data);
+      const starred = starredFor(provider, metrics, settings);
+      const paces = starred.map(m => computePace(m, nowSec));
+      const worst = paces.reduce((worst, pace) => pace && (TONE_ORDER[pace.tone] || 0) > (TONE_ORDER[worst?.tone] || 0) ? pace : worst, null);
+      const today = spend?.[provider]?.summary?.today;
+      if (today && today.tokens > 0) {
+        out.push({
+          provider,
+          metrics: [{
+            key: metricKey(provider, 'today'),
+            metric: { id: 'today', label: 'Today', display: 'tokens', valueText: formatTokens(today.tokens) },
+            pace: worst
+          }]
+        });
+        continue;
+      }
+      if (!starred.length || !worst || worst.tone === 'ok') continue;
+      out.push({ provider, metrics: starred.map((m, i) => ({ key: metricKey(provider, m.id), metric: m, pace: paces[i] })) });
     }
     return out;
   }
@@ -307,6 +339,7 @@
   }
 
   function formatValue(m, mode = 'left') {
+    if (m?.display === 'tokens') return m.valueText ? `${m.valueText} tokens today` : '';
     const used = clampPercent(m?.usedPercent) ?? 0;
     return mode === 'used' ? `${formatPercent(used)} used` : `${formatPercent(100 - used)} left`;
   }
@@ -390,7 +423,7 @@
   }
 
   function trayMetrics(providers = {}, settings = {}, nowSec = Date.now() / 1000) {
-    const groups = stripEntries(providers, { ...settings, taskbarHiddenProviders: [] }, nowSec);
+    const groups = quotaEntries(providers, { ...settings, taskbarHiddenProviders: [] }, nowSec);
     const all = groups.flatMap(group => group.metrics.map(entry => ({ ...entry, provider: group.provider })));
     const starred = new Set(settings.starredMetrics || []);
     const explicit = all.filter(entry => starred.has(entry.key));
