@@ -346,6 +346,7 @@ svg.ico-fill { fill: currentColor; stroke: none; }
 .logo-claude { background: #d97757; }
 .logo-codex, .logo-cursor, .logo-antigravity, .logo-muse, .logo-opencode { background: #141415; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
 .logo-antigravity .logo-glyph { background: #6aa0ff; }
+.logo-muse .logo-glyph { background: #0082fb; }
 
 .spinner {
   width: 12px;
